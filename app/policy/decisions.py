@@ -42,6 +42,7 @@ class DecisionEngine:
             "error": None,
         }
         self.discovery_deadline: datetime | None = None
+        self.discovery_timeout = self.settings.discovery_timeout_s
 
     def handle_message(self, _client, _userdata, msg) -> None:
         topic = msg.topic
@@ -169,7 +170,7 @@ class DecisionEngine:
             "started_at": now.isoformat(),
             "error": None,
         }
-        self.discovery_deadline = now + timedelta(seconds=30)
+        self.discovery_deadline = now + timedelta(seconds=self.discovery_timeout)
 
     def list_discoveries(self) -> Dict[str, Any]:
         if (
@@ -181,7 +182,7 @@ class DecisionEngine:
                 "status": "error",
                 "message": "Edge bridge did not respond",
                 "started_at": self.discovery_state.get("started_at"),
-                "error": "timeout",
+                "error": f"timeout>{self.discovery_timeout}s",
             }
             self.discovery_deadline = None
         return {"devices": self.discovery_results, "state": self.discovery_state}

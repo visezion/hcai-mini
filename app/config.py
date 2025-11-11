@@ -19,6 +19,7 @@ class Settings:
     ui_enable: bool = os.environ.get("UI_ENABLE", "true").lower() == "true"
     discovery_subnet: str = os.environ.get("DISCOVERY_SUBNET", "10.0.0.0/24")
     discovery_topic: str = os.environ.get("DISCOVERY_TOPIC", "ctrl/discover")
+    discovery_timeout_s: int = int(os.environ.get("DISCOVERY_TIMEOUT_S", "180"))
 
 
 @lru_cache

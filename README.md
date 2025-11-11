@@ -146,6 +146,8 @@ make down    # stop services
 
 Set environment variables (MQTT_URL, credentials, MODE, etc.) in `docker-compose.yml` or via an `.env` file to point at your site broker/devices.
 
+Discovery scans can take up to several minutes on large subnets. Adjust `DISCOVERY_TIMEOUT_S` (default 180 seconds) in the hcai-mini container to control how long the UI waits before flagging a timeout.
+
 ## Network discovery guardrails
 
 - Discovery never edits `devices.yaml` without operator approval.
