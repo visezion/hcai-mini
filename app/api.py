@@ -70,7 +70,7 @@ def discover_start(payload: Dict[str, Any] = Body(default=None)) -> Dict[str, An
 
 @app.get("/discover")
 def list_discoveries() -> Dict[str, Any]:
-    return {"devices": engine.list_discoveries()}
+    return engine.list_discoveries()
 
 
 @app.post("/discover/approve")

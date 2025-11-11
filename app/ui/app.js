@@ -33,10 +33,25 @@ function renderTiles(data) {
   });
 }
 
-function renderDiscovery(devices) {
+function renderDiscovery(discoverPayload) {
   const body = document.getElementById('discovery-body');
   body.innerHTML = '';
-  (devices || []).forEach((device) => {
+  const devices = discoverPayload?.devices || [];
+  const state = discoverPayload?.state || {};
+  const statusEl = document.getElementById('discovery-status');
+  const stateName = state.status || 'idle';
+  if (statusEl) {
+    statusEl.textContent = state.message || 'Idle';
+    statusEl.className = `status-chip ${stateName}`;
+    statusEl.title = state.error || '';
+  }
+  const button = document.getElementById('start-discovery');
+  if (button) {
+    const running = stateName === 'running';
+    button.disabled = running;
+    button.textContent = running ? 'Scanning...' : 'Discover Devices';
+  }
+  devices.forEach((device) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${device.ip}</td>
       <td>${device.proto || 'unknown'}</td>

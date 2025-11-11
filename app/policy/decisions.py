@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from ..config import append_device, get_policy, get_settings
@@ -35,6 +35,13 @@ class DecisionEngine:
         self.mode = self.settings.mode
         self.latest_tiles: Dict[str, Dict[str, Any]] = {}
         self.discovery_results: List[Dict[str, Any]] = []
+        self.discovery_state: Dict[str, Any] = {
+            "status": "idle",
+            "message": "Idle",
+            "started_at": None,
+            "error": None,
+        }
+        self.discovery_deadline: datetime | None = None
 
     def handle_message(self, _client, _userdata, msg) -> None:
         topic = msg.topic
@@ -55,6 +62,15 @@ class DecisionEngine:
         elif topic == "ctrl/discover/results":
             data = json.loads(payload)
             self.discovery_results = data.get("devices", [])
+            count = len(self.discovery_results)
+            self.discovery_state = {
+                "status": "done",
+                "message": f"Found {count} device(s)" if count else "No devices discovered",
+                "started_at": self.discovery_state.get("started_at"),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "error": None,
+            }
+            self.discovery_deadline = None
         else:
             # ignore
             pass
@@ -142,12 +158,33 @@ class DecisionEngine:
         self.bus.publish(topic, action_payload)
 
     def start_discovery(self, subnet: str) -> None:
-        payload = {"subnet": subnet, "ts": datetime.now(timezone.utc).isoformat()}
+        now = datetime.now(timezone.utc)
+        payload = {"subnet": subnet, "ts": now.isoformat()}
         self.bus.publish("ctrl/discover/start", payload)
         record_audit(self.db, "system", "discover_start", payload)
+        self.discovery_results = []
+        self.discovery_state = {
+            "status": "running",
+            "message": f"Scanning {subnet}",
+            "started_at": now.isoformat(),
+            "error": None,
+        }
+        self.discovery_deadline = now + timedelta(seconds=30)
 
-    def list_discoveries(self) -> List[Dict[str, Any]]:
-        return self.discovery_results
+    def list_discoveries(self) -> Dict[str, Any]:
+        if (
+            self.discovery_state.get("status") == "running"
+            and self.discovery_deadline
+            and datetime.now(timezone.utc) > self.discovery_deadline
+        ):
+            self.discovery_state = {
+                "status": "error",
+                "message": "Edge bridge did not respond",
+                "started_at": self.discovery_state.get("started_at"),
+                "error": "timeout",
+            }
+            self.discovery_deadline = None
+        return {"devices": self.discovery_results, "state": self.discovery_state}
 
     def approve_device(self, device: Dict[str, Any]) -> None:
         append_device(device)

@@ -65,3 +65,26 @@ th, td {
 th {
   background: #16202b;
 }
+
+.status-chip {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: #1b2633;
+  border: 1px solid #283445;
+  font-size: 0.85rem;
+}
+
+.status-chip.running {
+  background: #f0ad1d;
+  color: #111;
+}
+
+.status-chip.done {
+  background: #1f6feb;
+}
+
+.status-chip.error {
+  background: #c62828;
+}
