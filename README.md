@@ -179,6 +179,7 @@ hcai-mini now includes an end-to-end automatic onboarding workflow:
 10. **Audit + metrics** – every scan/approval is stored in the `audits` table; Prometheus counters (`discover_*`) expose performance in `/metrics`.
 11. **Template registry** – drop new YAML templates under `config/templates/` to teach hcai-mini about additional vendors/models.
 12. **Device inventory & telemetry** – approved devices appear immediately in the dashboard, `/devices` API, and the edge bridge’s runtime registry.
+13. **Automatic polling** – hcai-edge polls Modbus registers or SNMP OIDs defined in each template (default every 10 seconds) and publishes the readings to `site/<site>/rack/<rack>/telemetry`, keeping the Monitor page and AI models up to date without extra agents.
 
 Key environment toggles: `DISCOVERY_SUBNET`, `DISCOVERY_IPS_PER_MIN`, `DISCOVERY_SNMP_COMMUNITY`, `DISCOVERY_TEMPLATE_DIR`, `DISCOVERY_INTERVAL_HOURS`, and `DISCOVERY_ENABLED`.
 

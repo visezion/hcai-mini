@@ -15,7 +15,7 @@ function postJSON(url, payload) {
       try {
         const data = await res.json();
         detail = data.detail || detail;
-      } catch (e) {
+      } catch (err) {
         /* ignore */
       }
       throw new Error(detail);
@@ -78,7 +78,9 @@ function renderStatus(status = {}) {
   if (ingestCard) ingestCard.textContent = (status.ingest_count ?? 0).toLocaleString();
   if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetry…';
   const autoToggle = document.getElementById('auto-toggle');
-  if (autoToggle) autoToggle.checked = status.auto_enabled ?? true;
+  if (autoToggle && typeof status.auto_enabled === 'boolean') {
+    autoToggle.checked = status.auto_enabled;
+  }
 }
 
 function renderTiles(data) {
@@ -107,14 +109,14 @@ function renderTiles(data) {
       </div>`;
     container.appendChild(card);
   });
-  const selector = document.getElementById('history-rack');
-  if (selector) {
-    selector.innerHTML = racks.length ? racks.map((r) => `<option value="${r}">${r}</option>`).join('') : '<option value="">--</option>';
-    if (!currentRack || !racks.includes(currentRack)) {
-      currentRack = racks[0];
+  if (racks.length) {
+    const selector = document.getElementById('history-rack');
+    if (selector) {
+      selector.innerHTML = racks.map((r) => `<option value="${r}">${r}</option>`).join('');
+      if (!currentRack || !racks.includes(currentRack)) currentRack = racks[0];
+      selector.value = currentRack;
+      loadHistory(currentRack);
     }
-    selector.value = currentRack || '';
-    if (currentRack) loadHistory(currentRack);
   }
 }
 
@@ -161,7 +163,7 @@ function renderActions(actions = []) {
     const explain = cmd.explain?.message || '--';
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${action.id}</td>
+      <td>${action.id ?? '--'}</td>
       <td>${formatTime(action.ts)}</td>
       <td>${action.device_id}</td>
       <td>${action.reason || '--'}</td>
@@ -193,8 +195,8 @@ function renderAnomalies(anomalies = []) {
     return;
   }
   if (summaryMeta) {
-    const latestAlarm = anomalies.find((a) => Number(a.is_alarm) === 1);
-    summaryMeta.textContent = latestAlarm ? `${latestAlarm.rack} flagged at ${formatTime(latestAlarm.ts)}` : 'All scores healthy';
+    const alarm = anomalies.find((a) => Number(a.is_alarm) === 1);
+    summaryMeta.textContent = alarm ? `${alarm.rack} flagged at ${formatTime(alarm.ts)}` : 'All scores healthy';
   }
   anomalies.forEach((entry) => {
     const li = document.createElement('li');
@@ -220,6 +222,9 @@ function renderDevices(devices = []) {
     return;
   }
   devices.forEach((dev) => {
+    if (dev.proto && dev.host) {
+      approvedDevices.add(`${dev.proto}:${dev.host}`);
+    }
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${dev.id}</td>
       <td>${dev.type || '--'}</td>
@@ -228,23 +233,6 @@ function renderDevices(devices = []) {
       <td>${dev.port || '--'}</td>`;
     body.appendChild(tr);
   });
-}
-
-async function loadDevices() {
-  try {
-    const res = await fetch('/devices');
-    const data = await res.json();
-    const devices = data.devices || [];
-    devices.forEach((dev) => {
-      if (dev.proto && dev.host) {
-        approvedDevices.add(`${dev.proto}:${dev.host}`);
-      }
-    });
-    renderDevices(devices);
-  } catch (err) {
-    console.error('device fetch failed', err);
-    renderDevices([]);
-  }
 }
 
 function renderTemplates(templates = []) {
@@ -266,17 +254,6 @@ function renderTemplates(templates = []) {
   });
 }
 
-async function loadTemplates() {
-  try {
-    const res = await fetch('/templates');
-    const data = await res.json();
-    renderTemplates(data.templates || []);
-  } catch (err) {
-    console.error('template fetch failed', err);
-    renderTemplates([]);
-  }
-}
-
 function renderDiscoveryHistory(history = []) {
   const list = document.getElementById('discovery-history');
   if (!list) return;
@@ -293,12 +270,12 @@ function renderDiscoveryHistory(history = []) {
   });
 }
 
-function renderDiscovery(discoverPayload) {
+function renderDiscovery(discoverPayload = {}) {
   lastDiscoveryPayload = discoverPayload;
   const body = document.getElementById('discovery-body');
   body.innerHTML = '';
-  const devices = discoverPayload?.devices || [];
-  const state = discoverPayload?.state || {};
+  const devices = discoverPayload.devices || [];
+  const state = discoverPayload.state || {};
   const statusEl = document.getElementById('discovery-status');
   const stateName = state.status || 'idle';
   if (statusEl) {
@@ -312,7 +289,7 @@ function renderDiscovery(discoverPayload) {
     button.disabled = running;
     button.textContent = running ? 'Scanning...' : 'Discover devices';
   }
-  renderDiscoveryHistory(discoverPayload?.history || []);
+  renderDiscoveryHistory(discoverPayload.history || []);
   if (!devices.length) {
     body.innerHTML = '<tr><td colspan="5">No devices discovered yet</td></tr>';
     return;
@@ -404,6 +381,28 @@ async function approveAction(id) {
     await postJSON('/actions/approve', { id });
   } catch (err) {
     alert(err.message || 'Failed to comply');
+  }
+}
+
+async function loadDevices() {
+  try {
+    const res = await fetch('/devices');
+    const data = await res.json();
+    renderDevices(data.devices || []);
+  } catch (err) {
+    console.error('device fetch failed', err);
+    renderDevices([]);
+  }
+}
+
+async function loadTemplates() {
+  try {
+    const res = await fetch('/templates');
+    const data = await res.json();
+    renderTemplates(data.templates || []);
+  } catch (err) {
+    console.error('template fetch failed', err);
+    renderTemplates([]);
   }
 }
 
