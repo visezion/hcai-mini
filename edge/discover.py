@@ -9,9 +9,20 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from pymodbus.client import ModbusTcpClient
-from pysnmp.hlapi import (CommunityData, ContextData, ObjectIdentity,
-                          ObjectType, SnmpEngine, UdpTransportTarget,
-                          getCmd)
+try:
+    from pysnmp.hlapi import (
+        CommunityData,
+        ContextData,
+        ObjectIdentity,
+        ObjectType,
+        SnmpEngine,
+        UdpTransportTarget,
+        getCmd,
+    )
+
+    HAS_SNMP = True
+except ImportError:  # pragma: no cover - optional dependency
+    HAS_SNMP = False
 
 PORTS = {
     "modbus": 502,
@@ -151,7 +162,7 @@ class DiscoveryService:
             fp = self._fingerprint_modbus(ip)
             if fp:
                 return Fingerprint(proto="modbus", info=fp)
-        if services.get("snmp"):
+        if services.get("snmp") and HAS_SNMP:
             fp = self._fingerprint_snmp(ip)
             if fp:
                 return Fingerprint(proto="snmp", info=fp)
@@ -181,6 +192,8 @@ class DiscoveryService:
         return None
 
     def _fingerprint_snmp(self, ip: str) -> Optional[Dict[str, str]]:
+        if not HAS_SNMP:
+            return None
         iterator = getCmd(
             SnmpEngine(),
             CommunityData(self.snmp_community, mpModel=0),
