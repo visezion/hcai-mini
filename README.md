@@ -102,14 +102,14 @@ For fully automated updates, wrap the commands above in a cron job or CI workflo
 
 ## Using the platform
 
-1. **Feed telemetry** (simulate if needed):
+1. **Open the dashboard + stream telemetry.** Browse to `http://<host>:8080/ui`, pick Light/Dark from the toggle (light is default), then publish sample telemetry if needed:
    ```bash
    mosquitto_pub -h localhost -t site/dc1/rack/R12/telemetry -m '{
      "ts":"2025-11-11T06:00:00Z","site":"dc1","rack":"R12",
      "metrics":{"temp_c":29.3,"hum_pct":42.1,"power_kw":3.8,"airflow_cfm":165}
    }'
    ```
-   Tiles update immediately; forecasts/anomaly rows go into SQLite (`data/hcai.sqlite`).
+   Tiles and the ingest summary card update instantly; data is persisted in SQLite (`data/hcai.sqlite`).
 
 2. **Discover new devices.**
    - Go to **Network Discovery** in the UI, enter a subnet (e.g., `10.0.0.0/24`), click **Discover Devices**.
