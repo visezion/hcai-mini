@@ -121,11 +121,11 @@ class DecisionEngine:
             "ts": ts,
             "metrics": metrics,
         }
-        self._maybe_act(rack)
+        self._maybe_act(rack, metrics)
         self.ingest_count += 1
         self.last_ingest_ts = ts
 
-    def _maybe_act(self, rack: str) -> None:
+    def _maybe_act(self, rack: str, metrics: Dict[str, Any]) -> None:
         window = self.feature_store.get_window(rack, "temp_c")
         preds, lo, hi = self.forecaster.predict(window)
         score, alarm = self.anomaly.score(window)
@@ -151,19 +151,55 @@ class DecisionEngine:
                 "is_alarm": 1 if alarm else 0,
             },
         )
-        if not alarm and (preds[5] if len(preds) > 5 else preds[0]) < self.policy["limits"]["temp_c"]["max"]:
+        triggers: List[str] = []
+        temp_limit = self.policy["limits"]["temp_c"]["max"]
+        forecast_target = None
+        if preds:
+            idx = 5 if len(preds) > 5 else 0
+            forecast_target = preds[idx]
+        if alarm:
+            triggers.append("vae")
+        current_temp = metrics.get("temp_c")
+        if current_temp is not None and current_temp >= temp_limit:
+            triggers.append("temp_limit")
+        if forecast_target is not None and forecast_target >= temp_limit:
+            triggers.append("forecast")
+        if len(window) >= 6:
+            delta = window[-1] - window[-6]
+            if delta >= 0.8:
+                triggers.append("temp_trend")
+        power_kw = metrics.get("power_kw")
+        if power_kw is not None and power_kw >= self.policy.get("power_alarm_kw", 5.5):
+            triggers.append("power_spike")
+        hum = metrics.get("hum_pct")
+        humidity_limits = self.policy.get("humidity", {})
+        if hum is not None and humidity_limits:
+            if hum < humidity_limits.get("min", -999) or hum > humidity_limits.get("max", 999):
+                triggers.append("humidity")
+        if not triggers:
             return
         current = {"supply_temp_c": 18.0, "fan_rpm": 1200}
         proposal = self.controller.propose(preds, current)
         safe = self.safety.enforce(current, proposal)
-        explanation = self._explain_action(rack, preds, score)
+        explanation = self._explain_action(rack, preds, score, triggers)
+        reason = "forecast_risk_high"
+        if "temp_limit" in triggers:
+            reason = "temperature_limit"
+        elif "temp_trend" in triggers:
+            reason = "temperature_trend"
+        elif "power_spike" in triggers:
+            reason = "power_spike"
+        elif "humidity" in triggers:
+            reason = "humidity_out_of_range"
+        elif "vae" in triggers:
+            reason = "anomaly"
         action_payload = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "device_id": self.policy.get("site", "device"),
             "cmd": "setpoints",
             "set": {k: safe[k] for k in ("supply_temp_c", "fan_rpm")},
             "mode": self.mode,
-            "reason": "forecast_risk_high" if alarm else "anomaly",
+            "reason": reason,
             "ticket": "HCAI-BOOTSTRAP",
             "constraints": self.policy.get("limits", {}),
             "safety_summary": safe["safety_summary"],
@@ -274,11 +310,14 @@ class DecisionEngine:
         self.db.update_action_status(action_id, "sent")
         return True
 
-    def _explain_action(self, rack: str, forecast: List[float], anomaly_score: float) -> Dict[str, Any]:
+    def _explain_action(
+        self, rack: str, forecast: List[float], anomaly_score: float, triggers: List[str]
+    ) -> Dict[str, Any]:
         next_temp = forecast[0] if forecast else None
         return {
             "rack": rack,
             "forecast_temp": next_temp,
             "risk_score": anomaly_score,
+            "triggers": triggers,
             "message": "Cooling adjustment proposed to maintain SLA",
         }
