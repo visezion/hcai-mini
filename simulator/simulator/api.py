@@ -4,6 +4,26 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 CONTROL_PATH = os.environ.get("SIM_CONTROL_PATH", "/simulator/control.json")
 SCENARIOS = ["temp_spike", "cooling_failure", "sensor_dropout", "power_spike"]
+SITE = os.environ.get("SIM_SITE", "sim_dc")
+RACKS = [r.strip() for r in os.environ.get("SIM_RACKS", "R1,R2,R3,R4").split(",") if r.strip()]
+
+
+def _device_list() -> list[dict]:
+    devices = []
+    for rack in RACKS:
+        devices.append(
+            {
+                "id": f"sim_{rack.lower()}",
+                "rack": rack,
+                "site": SITE,
+                "type": "crac",
+                "proto": "sim",
+                "host": "hcai-sim",
+                "port": 0,
+                "capabilities": ["cooling", "fan"],
+            }
+        )
+    return devices
 
 
 class ScenarioHandler(BaseHTTPRequestHandler):
@@ -16,15 +36,18 @@ class ScenarioHandler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_GET(self):
-        if self.path != "/scenarios":
-            self.send_error(404)
+        if self.path == "/scenarios":
+            try:
+                with open(CONTROL_PATH, "r", encoding="utf-8") as handle:
+                    current = json.load(handle)
+            except FileNotFoundError:
+                current = {}
+            self._json({"scenarios": current})
             return
-        try:
-            with open(CONTROL_PATH, "r", encoding="utf-8") as handle:
-                current = json.load(handle)
-        except FileNotFoundError:
-            current = {}
-        self._json({"scenarios": current})
+        if self.path == "/devices":
+            self._json({"devices": _device_list()})
+            return
+        self.send_error(404)
 
     def do_POST(self):
         if self.path != "/scenarios":
@@ -48,4 +71,3 @@ def start_http():
     port = int(os.environ.get("SIM_API_PORT", "9100"))
     httpd = HTTPServer((host, port), ScenarioHandler)
     httpd.serve_forever()
-

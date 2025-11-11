@@ -238,6 +238,36 @@ def simulator_set(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _simulator_request("post", "/scenarios", payload)
 
 
+@app.get("/simulator/devices")
+def simulator_devices() -> Dict[str, Any]:
+    return _simulator_request("get", "/devices")
+
+
+@app.post("/simulator/devices/import")
+def simulator_devices_import(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    data = _simulator_request("get", "/devices")
+    devices = data.get("devices", [])
+    imported: List[Dict[str, Any]] = []
+    site_override = (payload or {}).get("site")
+    ts = datetime.now(timezone.utc).isoformat()
+    for device in devices:
+        entry = {
+            "id": device.get("id") or f"sim_{device.get('rack', 'rack').lower()}",
+            "type": device.get("type", "crac"),
+            "proto": device.get("proto", "sim"),
+            "host": device.get("host", "hcai-sim"),
+            "port": device.get("port", 0),
+            "rack": device.get("rack"),
+            "site": site_override or device.get("site") or engine.policy.get("site", "sim_dc"),
+            "description": "Imported from simulator",
+        }
+        action = engine.approve_device(entry)
+        payload_evt = {"device": entry, "action": action, "ts": ts}
+        bus.publish("discover/approved", payload_evt)
+        imported.append({"id": entry["id"], "action": action})
+    return {"status": "ok", "imported": imported}
+
+
 @app.get("/metrics")
 def metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

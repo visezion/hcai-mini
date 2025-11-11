@@ -398,6 +398,28 @@ function initDiscoveryButton() {
   }
 }
 
+function initSimulatorImport() {
+  const btn = document.getElementById('import-sim');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      const res = await fetch('/simulator/devices/import', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || res.statusText);
+      }
+      alert(`Simulator import complete (${(data.imported || []).length} device(s))`);
+      await loadDevices();
+      await loadDeviceSummary();
+    } catch (err) {
+      alert(err.message || 'Simulator import failed');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 async function validateDevice(device) {
   try {
     const port = device.port || DEFAULT_PORTS[device.proto || ''] || 0;
@@ -507,6 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initNavigation();
   initDiscoveryButton();
+  initSimulatorImport();
   initHistorySelector();
   initModeToggle();
   loadMode();

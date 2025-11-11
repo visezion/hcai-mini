@@ -281,6 +281,9 @@ def on_command(_client, _userdata, msg) -> None:
     device_id = payload.get("device_id")
     if not device_id:
         return
+    device_meta = registry.get_device(device_id)
+    if device_meta.get("proto") == "sim":
+        return
     setpoints = payload.get("set", {})
     write_modbus(device_id, setpoints)
     receipt = {

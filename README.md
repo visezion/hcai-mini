@@ -76,6 +76,8 @@ Need to showcase hcai-mini without touching live hardware? Start the simulator c
 
 The simulator dashboard is built with plain React (ES modules) so you do not need a separate build step; the static assets live under `app/ui/simulator.*`. It is a safe way to demo the ingest → forecast → control loop with live charts, rack tiles, and scenario toggles driven entirely from the browser.
 
+Need real devices for actions? Use the **Import simulator** button on the Setup tab (or call `POST /simulator/devices/import`) to pull the simulated CRACs into `config/devices.yaml`. Approved devices show up in the inventory grid, the controller maps each rack to its simulated device ID, and AI actions you approve will now drive the simulator (which publishes receipts back on `ctrl/<device_id>/receipt`).
+
 ## Keeping your deployment up to date
 
 1. Pull the latest code:

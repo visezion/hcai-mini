@@ -1,8 +1,9 @@
 import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List
 
-from ..config import append_device, get_policy, get_settings, remove_device
+from ..config import append_device, get_devices, get_policy, get_settings, remove_device
 from ..features import FeatureStore
 from ..metrics import (
     DISCOVER_DEVICES_APPROVED_TOTAL,
@@ -54,6 +55,11 @@ class DecisionEngine:
         self.last_ingest_ts: str | None = None
         self.started_at = datetime.now(timezone.utc)
         self.auto_enabled = True
+        self.devices_path = Path(self.settings.devices_path)
+        self.devices_mtime = 0.0
+        self.rack_device_map: Dict[str, str] = {}
+        self.device_site_map: Dict[str, str] = {}
+        self._reload_devices()
 
     def handle_message(self, _client, _userdata, msg) -> None:
         topic = msg.topic
@@ -93,6 +99,8 @@ class DecisionEngine:
             }
             record_audit(self.db, "system", "discover_results", data)
             self.discovery_deadline = None
+        elif topic in {"discover/approved", "discover/removed"}:
+            self._reload_devices()
         else:
             # ignore
             pass
@@ -182,6 +190,7 @@ class DecisionEngine:
         proposal = self.controller.propose(preds, current)
         safe = self.safety.enforce(current, proposal)
         explanation = self._explain_action(rack, preds, score, triggers)
+        device_id = self._device_for_rack(rack) or self.policy.get("site", "device")
         reason = "forecast_risk_high"
         if "temp_limit" in triggers:
             reason = "temperature_limit"
@@ -195,7 +204,7 @@ class DecisionEngine:
             reason = "anomaly"
         action_payload = {
             "ts": datetime.now(timezone.utc).isoformat(),
-            "device_id": self.policy.get("site", "device"),
+            "device_id": device_id,
             "cmd": "setpoints",
             "set": {k: safe[k] for k in ("supply_temp_c", "fan_rpm")},
             "mode": self.mode,
@@ -263,6 +272,7 @@ class DecisionEngine:
 
     def approve_device(self, device: Dict[str, Any]) -> str:
         action = append_device(device)
+        self._reload_devices()
         DISCOVER_DEVICES_APPROVED_TOTAL.inc()
         record_audit(self.db, "system", "discover_approve", {**device, "action": action})
         return action
@@ -270,6 +280,7 @@ class DecisionEngine:
     def remove_device_entry(self, device_id: str) -> bool:
         removed = remove_device(device_id)
         if removed:
+            self._reload_devices()
             record_audit(self.db, "system", "device_remove", {"device_id": device_id})
         return removed
 
@@ -321,3 +332,29 @@ class DecisionEngine:
             "triggers": triggers,
             "message": "Cooling adjustment proposed to maintain SLA",
         }
+
+    def _reload_devices(self) -> None:
+        data = get_devices()
+        rack_map: Dict[str, str] = {}
+        site_map: Dict[str, str] = {}
+        for entry in data.get("devices", []):
+            device_id = entry.get("id")
+            rack = entry.get("rack")
+            if device_id and rack:
+                rack_map[rack] = device_id
+                site_map[device_id] = entry.get("site")
+        self.rack_device_map = rack_map
+        self.device_site_map = site_map
+        try:
+            self.devices_mtime = self.devices_path.stat().st_mtime
+        except FileNotFoundError:
+            self.devices_mtime = 0.0
+
+    def _device_for_rack(self, rack: str) -> str | None:
+        try:
+            current_mtime = self.devices_path.stat().st_mtime
+        except FileNotFoundError:
+            current_mtime = 0.0
+        if current_mtime != self.devices_mtime:
+            self._reload_devices()
+        return self.rack_device_map.get(rack)
