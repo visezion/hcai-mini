@@ -1,10 +1,11 @@
 import asyncio
+import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import Response
@@ -118,9 +119,32 @@ def list_templates() -> Dict[str, Any]:
     return {"templates": load_templates()}
 
 
+@app.post("/devices/validate")
+def validate_device(device: Dict[str, Any]) -> Dict[str, Any]:
+    host = device.get("host")
+    port = int(device.get("port", 0))
+    if not host or not port:
+        raise HTTPException(status_code=400, detail="host and port required")
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return {"ok": True, "message": f"Connection to {host}:{port} succeeded"}
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"Connection failed: {exc}") from exc
+
+
 @app.get("/actions")
 def actions(limit: int = 20) -> Dict[str, Any]:
-    return {"actions": engine.get_recent_actions(limit)}
+    rows = engine.get_recent_actions(limit)
+    for row in rows:
+        cmd = row.get("cmd_json")
+        if isinstance(cmd, str):
+            try:
+                row["cmd"] = json.loads(cmd)
+            except json.JSONDecodeError:
+                row["cmd"] = {}
+        else:
+            row["cmd"] = cmd or {}
+    return {"actions": rows}
 
 
 @app.get("/anomalies")
@@ -131,6 +155,39 @@ def anomalies(limit: int = 20) -> Dict[str, Any]:
 @app.get("/status")
 def status() -> Dict[str, Any]:
     return engine.get_status()
+
+
+@app.get("/mode")
+def get_mode() -> Dict[str, Any]:
+    state = engine.get_status()
+    return {"mode": state["mode"], "auto_enabled": state["auto_enabled"]}
+
+
+@app.post("/mode")
+def set_mode(payload: Dict[str, Any]) -> Dict[str, Any]:
+    mode = payload.get("mode")
+    auto = payload.get("auto_enabled")
+    if mode:
+        engine.set_mode(mode)
+    if auto is not None:
+        engine.set_auto(bool(auto))
+    return {"mode": engine.mode, "auto_enabled": engine.auto_enabled}
+
+
+@app.post("/actions/approve")
+def approve_action(payload: Dict[str, Any]) -> Dict[str, Any]:
+    action_id = payload.get("id")
+    if not action_id:
+        raise HTTPException(status_code=400, detail="id required")
+    ok = engine.approve_action(action_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="action not found")
+    return {"status": "sent", "id": action_id}
+
+
+@app.get("/telemetry/history")
+def telemetry_history(rack: str, limit: int = 120) -> Dict[str, Any]:
+    return {"rack": rack, "points": db.telemetry_history(rack, limit)}
 
 
 @app.get("/metrics")

@@ -53,6 +53,7 @@ class DecisionEngine:
         self.ingest_count = 0
         self.last_ingest_ts: str | None = None
         self.started_at = datetime.now(timezone.utc)
+        self.auto_enabled = True
 
     def handle_message(self, _client, _userdata, msg) -> None:
         topic = msg.topic
@@ -155,6 +156,7 @@ class DecisionEngine:
         current = {"supply_temp_c": 18.0, "fan_rpm": 1200}
         proposal = self.controller.propose(preds, current)
         safe = self.safety.enforce(current, proposal)
+        explanation = self._explain_action(rack, preds, score)
         action_payload = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "device_id": self.policy.get("site", "device"),
@@ -165,21 +167,29 @@ class DecisionEngine:
             "ticket": "HCAI-BOOTSTRAP",
             "constraints": self.policy.get("limits", {}),
             "safety_summary": safe["safety_summary"],
+            "explain": explanation,
         }
-        self.db.record_action(
+        status = "pending_manual" if not self.auto_enabled else "queued"
+        action_id = self.db.record_action(
             {
                 "ts": action_payload["ts"],
                 "device_id": action_payload["device_id"],
                 "cmd_json": action_payload,
                 "mode": self.mode,
-                "status": "queued",
+                "status": status,
                 "reason": action_payload["reason"],
                 "model_version": "bootstrap",
                 "safety_summary": safe["safety_summary"],
             }
         )
-        topic = "ctrl/proposals" if self.mode == "propose" else f"ctrl/{action_payload['device_id']}/set"
-        self.bus.publish(topic, action_payload)
+        if self.auto_enabled and self.mode.startswith("auto"):
+            topic = f"ctrl/{action_payload['device_id']}/set"
+            self.bus.publish(topic, action_payload)
+            self.db.update_action_status(action_id, "sent")
+        else:
+            topic = "ctrl/proposals"
+            self.bus.publish(topic, action_payload)
+            self.db.update_action_status(action_id, "pending_manual")
 
     def start_discovery(self, subnet: str, actor: str = "system") -> None:
         now = datetime.now(timezone.utc)
@@ -231,10 +241,38 @@ class DecisionEngine:
         uptime = datetime.now(timezone.utc) - self.started_at
         return {
             "mode": self.mode,
+            "auto_enabled": self.auto_enabled,
             "site": self.policy.get("site", "unknown"),
             "ingest_count": self.ingest_count,
             "last_ingest_ts": self.last_ingest_ts,
             "tracked_racks": len(self.latest_tiles),
             "uptime_s": int(uptime.total_seconds()),
             "discovery": self.discovery_state,
+        }
+
+    def set_mode(self, mode: str) -> None:
+        self.mode = mode
+        record_audit(self.db, "system", "mode_change", {"mode": mode})
+
+    def set_auto(self, enabled: bool) -> None:
+        self.auto_enabled = enabled
+        record_audit(self.db, "system", "auto_toggle", {"auto_enabled": enabled})
+
+    def approve_action(self, action_id: int) -> bool:
+        action = self.db.get("actions", action_id)
+        if not action:
+            return False
+        cmd_json = json.loads(action["cmd_json"]) if isinstance(action["cmd_json"], str) else action["cmd_json"]
+        topic = f"ctrl/{cmd_json['device_id']}/set"
+        self.bus.publish(topic, cmd_json)
+        self.db.update_action_status(action_id, "sent")
+        return True
+
+    def _explain_action(self, rack: str, forecast: List[float], anomaly_score: float) -> Dict[str, Any]:
+        next_temp = forecast[0] if forecast else None
+        return {
+            "rack": rack,
+            "forecast_temp": next_temp,
+            "risk_score": anomaly_score,
+            "message": "Cooling adjustment proposed to maintain SLA",
         }

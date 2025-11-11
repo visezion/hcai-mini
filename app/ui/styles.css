@@ -180,6 +180,36 @@ input:checked + .slider:before {
   margin-top: 0.4rem;
   color: var(--muted);
 }
+.main-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+.nav-btn {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--card-bg);
+  color: var(--foreground);
+  cursor: pointer;
+}
+.nav-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.pages {
+  padding: 1.5rem 2rem 2.5rem;
+}
+.page {
+  display: none;
+}
+.page.active {
+  display: block;
+}
 .dashboard {
   padding: 1.5rem 2rem 2.5rem;
   display: grid;
@@ -344,6 +374,21 @@ input:checked + .slider:before {
 }
 #discovery-history li:last-child {
   border-bottom: none;
+}
+
+#history-panel #history-list li {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--panel-border);
+  padding: 0.3rem 0;
+}
+
+#history-rack {
+  padding: 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--card-bg);
+  color: var(--foreground);
 }
 .status-chip {
   display: inline-flex;

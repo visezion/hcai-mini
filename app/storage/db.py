@@ -90,13 +90,48 @@ class DB:
             rows = cur.fetchall()
             return [dict(r) for r in rows]
 
-    def record_action(self, action: Dict[str, Any]) -> None:
+    def get(self, table: str, row_id: int) -> Dict[str, Any] | None:
+        with self.lock:
+            cur = self.conn.execute(f"SELECT * FROM {table} WHERE id = ?", (row_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    def update_action_status(self, action_id: int, status: str) -> None:
+        with self.lock, self.conn:
+            self.conn.execute(
+                "UPDATE actions SET status = :status WHERE id = :id",
+                {"status": status, "id": action_id},
+            )
+
+    def update_action_cmd(self, action_id: int, new_cmd: Dict[str, Any]) -> None:
+        with self.lock, self.conn:
+            self.conn.execute(
+                "UPDATE actions SET cmd_json = :cmd WHERE id = :id",
+                {"cmd": json.dumps(new_cmd), "id": action_id},
+            )
+
+    def telemetry_history(self, rack: str, limit: int = 120) -> list[Dict[str, Any]]:
+        with self.lock:
+            cur = self.conn.execute(
+                "SELECT ts, temp_c, hum_pct, power_kw, airflow_cfm FROM telemetry WHERE rack = ? ORDER BY ts DESC LIMIT ?",
+                (rack, limit),
+            )
+            rows = cur.fetchall()
+            return [dict(r) for r in rows]
+
+    def record_action(self, action: Dict[str, Any]) -> int:
         payload = action.copy()
         if isinstance(payload.get("cmd_json"), dict):
             payload["cmd_json"] = json.dumps(payload["cmd_json"])
         if isinstance(payload.get("safety_summary"), dict):
             payload["safety_summary"] = json.dumps(payload["safety_summary"])
-        self.insert("actions", payload)
+        with self.lock, self.conn:
+            cur = self.conn.execute(
+                "INSERT INTO actions (ts, device_id, cmd_json, mode, status, reason, model_version, safety_summary) "
+                "VALUES (:ts, :device_id, :cmd_json, :mode, :status, :reason, :model_version, :safety_summary)",
+                payload,
+            )
+            return cur.lastrowid
 
     def record_receipt(self, receipt: Dict[str, Any]) -> None:
         payload = receipt.copy()

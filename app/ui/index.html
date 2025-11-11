@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -9,7 +9,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>hcai-mini</h1>
-        <p class="subtitle">Predict ï¿½ Detect ï¿½ Control ï¿½ Audit</p>
+        <p class="subtitle">Predict · Detect · Control</p>
       </div>
       <div class="topbar-actions">
         <div class="theme-toggle">
@@ -21,178 +21,188 @@
           <span>Dark</span>
         </div>
         <div class="status-cards">
-          <div class="stat" id="stat-site">
-            <span>Site</span>
-            <strong>--</strong>
-          </div>
-          <div class="stat" id="stat-mode">
-            <span>Mode</span>
-            <strong>--</strong>
-          </div>
-          <div class="stat" id="stat-racks">
-            <span>Tracked racks</span>
-            <strong>0</strong>
-          </div>
-          <div class="stat" id="stat-ingest">
-            <span>Last ingest</span>
-            <strong>--</strong>
-          </div>
+          <div class="stat" id="stat-site"><span>Site</span><strong>--</strong></div>
+          <div class="stat" id="stat-mode"><span>Mode</span><strong>--</strong></div>
+          <div class="stat" id="stat-racks"><span>Racks</span><strong>0</strong></div>
+          <div class="stat" id="stat-ingest"><span>Last ingest</span><strong>--</strong></div>
         </div>
       </div>
     </header>
 
     <section class="hero">
       <div>
-        <h2>Edge AI for resilient smart datacenters</h2>
-        <p>
-          hcai-mini ingests live rack &amp; facility telemetry, forecasts thermal risk, detects anomalies with a VAE,
-          and pushes safe, auditable actions to Modbus/BACnet/SNMP devices through hcai-edge.
-        </p>
+        <h2>Human-centric AI mini controller</h2>
+        <p>hcai-mini forecasts environmental drift, flags anomalies, and executes safe adjustments automatically—while keeping operators in full control.</p>
       </div>
       <ul>
-        <li>Real-time telemetry ingest over MQTT</li>
-        <li>Forecast &amp; anomaly scoring on rolling windows</li>
-        <li>Policy-driven MPC controller with audit trail</li>
-        <li>Automatic network discovery &amp; operator approvals</li>
+        <li>Real-time telemetry ingest</li>
+        <li>Forecast + anomaly detection</li>
+        <li>Policy-safe MPC actions</li>
+        <li>Auto-discovery & approvals</li>
       </ul>
     </section>
 
-    <section class="summary">
+    <nav class="main-nav">
+      <button class="nav-btn active" data-page="monitor">Monitor</button>
+      <button class="nav-btn" data-page="actions">Actions</button>
+      <button class="nav-btn" data-page="setup">Setup</button>
+    </nav>
+
+    <section class="summary" id="summary-bar">
       <article class="summary-card" id="summary-ingest">
         <h3>Ingest</h3>
-        <p>Live signals streaming from racks, CRACs, PDUs.</p>
-        <div class="value" data-label="messages">--</div>
-        <small id="summary-ingest-meta">Awaiting telemetryï¿½</small>
+        <p>Live messages processed</p>
+        <div class="value">0</div>
+        <small id="summary-ingest-meta">Awaiting telemetry…</small>
       </article>
       <article class="summary-card" id="summary-forecast">
         <h3>Forecast</h3>
-        <p>Baseline horizon 30 min with confidence bands.</p>
+        <p>30 min horizon</p>
         <div class="value">30&nbsp;min</div>
-        <small>Use custom TFT/N-BEATS exports via /data/models</small>
+        <small>Replace baseline with TFT/N-BEATS when ready</small>
       </article>
       <article class="summary-card" id="summary-anomaly">
         <h3>Detect</h3>
-        <p>Conv-VAE scores on rolling 120s windows.</p>
-        <div class="value" data-label="alerts">0</div>
+        <p>Active anomaly alarms</p>
+        <div class="value">0</div>
         <small id="summary-anomaly-meta">No active alerts</small>
       </article>
       <article class="summary-card" id="summary-actions">
         <h3>Control</h3>
-        <p>MPC proposals enforced by policy &amp; safety.</p>
-        <div class="value" data-label="actions">0</div>
+        <p>Recent AI proposals</p>
+        <div class="value">0</div>
         <small id="summary-actions-meta">No actions queued</small>
       </article>
     </section>
 
-    <main class="dashboard">
-      <section class="panel wide" id="telemetry-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Telemetry</h2>
-            <p>Live rack metrics with rolling updates</p>
+    <main class="pages">
+      <section class="page active" id="page-monitor">
+        <div class="panel wide" id="telemetry-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Telemetry</h2>
+              <p>Rack metrics updated every second</p>
+            </div>
+            <div class="panel-meta" id="telemetry-updated">Updated --</div>
           </div>
-          <div class="panel-meta" id="telemetry-updated">Updated --</div>
+          <div id="tiles" class="grid"></div>
         </div>
-        <div id="tiles" class="grid"></div>
+        <div class="panel" id="history-panel">
+          <div class="panel-header">
+            <div>
+              <h2>History &amp; prediction</h2>
+              <p>Last 20 points + forecast</p>
+            </div>
+            <select id="history-rack"></select>
+          </div>
+          <ul id="history-list" class="list"></ul>
+        </div>
       </section>
 
-      <section class="panel" id="actions-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Controller actions</h2>
-            <p>Most recent proposals / commands</p>
+      <section class="page" id="page-actions">
+        <div class="panel" id="mode-panel">
+          <div class="panel-header">
+            <div>
+              <h2>AI execution mode</h2>
+              <p>Switch between auto and manual approvals</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="auto-toggle" checked />
+              <span class="slider"></span>
+            </label>
           </div>
+          <p id="mode-help">AI actions auto-execute when toggle is ON. Switch OFF to require manual approval.</p>
         </div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Device</th>
-              <th>Mode</th>
-              <th>Reason</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="actions-body">
-            <tr><td colspan="5">No actions yet</td></tr>
-          </tbody>
-        </table>
+        <div class="panel wide" id="actions-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Controller actions</h2>
+              <p>Approve or inspect MPC decisions</p>
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>ID</th><th>Time</th><th>Device</th><th>Reason</th><th>Explain</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="actions-body">
+              <tr><td colspan="7">No actions yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel" id="alerts-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Anomalies</h2>
+              <p>Latest VAE scores per rack</p>
+            </div>
+          </div>
+          <ul id="anomalies-list" class="list"></ul>
+        </div>
       </section>
 
-      <section class="panel" id="devices-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Device inventory</h2>
-            <p>All controllable assets from devices.yaml</p>
+      <section class="page" id="page-setup">
+        <div class="panel wide" id="discovery-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Network discovery</h2>
+              <p>Scan, validate, and onboard hardware</p>
+            </div>
+            <div class="discovery-controls">
+              <input id="subnet" type="text" value="10.0.0.0/24" />
+              <button id="start-discovery">Discover devices</button>
+              <span id="discovery-status" class="status-chip">Idle</span>
+            </div>
           </div>
-        </div>
-        <table class="table">
-          <thead>
-            <tr><th>ID</th><th>Type</th><th>Protocol</th><th>Host</th><th>Port</th></tr>
-          </thead>
-          <tbody id="devices-body">
-            <tr><td colspan="5">Loading device listâ€¦</td></tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="panel" id="templates-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Templates</h2>
-            <p>Loaded auto-can templates from config/templates</p>
+          <div class="discovery-log">
+            <h3>Recent scans</h3>
+            <ul id="discovery-history"></ul>
           </div>
+          <table class="table">
+            <thead>
+              <tr><th>IP</th><th>Protocol</th><th>Template</th><th>Validate</th><th>Approve</th></tr>
+            </thead>
+            <tbody id="discovery-body"></tbody>
+          </table>
         </div>
-        <table class="table">
-          <thead>
-            <tr><th>Name</th><th>Protocol</th><th>Type</th><th>Map</th><th>File</th></tr>
-          </thead>
-          <tbody id="templates-body">
-            <tr><td colspan="5">Loading templatesâ€¦</td></tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="panel" id="alerts-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Anomalies &amp; alerts</h2>
-            <p>Latest VAE scores per rack</p>
+        <div class="panel" id="devices-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Device inventory</h2>
+              <p>Approved controllable assets</p>
+            </div>
           </div>
+          <table class="table">
+            <thead>
+              <tr><th>ID</th><th>Type</th><th>Protocol</th><th>Host</th><th>Port</th></tr>
+            </thead>
+            <tbody id="devices-body">
+              <tr><td colspan="5">Loading device list…</td></tr>
+            </tbody>
+          </table>
         </div>
-        <ul id="anomalies-list" class="list"></ul>
-      </section>
-
-      <section class="panel wide" id="discovery-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Network discovery</h2>
-            <p>Find Modbus/BACnet/SNMP endpoints automatically</p>
+        <div class="panel" id="templates-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Templates</h2>
+              <p>Auto-can fingerprint maps</p>
+            </div>
           </div>
-          <div class="discovery-controls">
-            <input id="subnet" type="text" value="10.0.0.0/24" />
-            <button id="start-discovery">Discover devices</button>
-            <span id="discovery-status" class="status-chip">Idle</span>
-          </div>
+          <table class="table">
+            <thead>
+              <tr><th>Name</th><th>Protocol</th><th>Type</th><th>Map</th><th>File</th></tr>
+            </thead>
+            <tbody id="templates-body">
+              <tr><td colspan="5">Loading templates…</td></tr>
+            </tbody>
+          </table>
         </div>
-        <div class="discovery-log">
-          <h3>Recent scans</h3>
-          <ul id="discovery-history"></ul>
-        </div>
-        <table class="table">
-          <thead>
-            <tr><th>IP</th><th>Protocol</th><th>Guess</th><th>Approve</th></tr>
-          </thead>
-          <tbody id="discovery-body"></tbody>
-        </table>
       </section>
     </main>
 
     <footer>
-      <small>&copy; 2025 hcai-mini ï¿½ MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; ï¿½ ctrl/&lt;device&gt;</small>
+      <small>&copy; 2025 hcai-mini · MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; · ctrl/&lt;device&gt;</small>
     </footer>
 
     <script src="/ui/app.js"></script>
   </body>
 </html>
-

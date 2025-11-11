@@ -128,6 +128,11 @@ For fully automated updates, wrap the commands above in a cron job or CI workflo
 5. **Review device inventory.**
    - The **Device inventory** panel in the UI lists every entry from `config/devices.yaml` (including items approved via auto-discovery) so you always know what the AI can control.
    - After approving a discovered device, the list refreshes automatically—no need to restart the stack.
+   - The new **Setup** tab lets operators import discovered devices, validate connectivity, and inspect templates before approving.
+
+6. **Operate the AI controller.**
+   - The **Monitor** tab shows live rack telemetry plus historical trends and forecast context.
+   - The **Actions** tab exposes every MPC proposal with inline explanations; switch the global toggle to require manual approval or let hcai-mini run autonomously.
 
 ## Repo layout
 
