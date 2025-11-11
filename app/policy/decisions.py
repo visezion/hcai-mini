@@ -325,12 +325,18 @@ class DecisionEngine:
         self, rack: str, forecast: List[float], anomaly_score: float, triggers: List[str]
     ) -> Dict[str, Any]:
         next_temp = forecast[0] if forecast else None
+        trigger_msg = ", ".join(triggers) if triggers else "policy"
+        if next_temp is not None:
+            temp_text = f"{next_temp:.1f}C"
+        else:
+            temp_text = "n/a"
+        message = f"Triggers: {trigger_msg}. Forecast {temp_text}, risk {anomaly_score:.3f}."
         return {
             "rack": rack,
             "forecast_temp": next_temp,
             "risk_score": anomaly_score,
             "triggers": triggers,
-            "message": "Cooling adjustment proposed to maintain SLA",
+            "message": message,
         }
 
     def _reload_devices(self) -> None:

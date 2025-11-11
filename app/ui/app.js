@@ -2,6 +2,7 @@
 
 let lastDiscoveryPayload = null;
 let currentRack = null;
+let currentMode = null;
 const approvedDevices = new Set();
 
 function postJSON(url, payload) {
@@ -69,6 +70,11 @@ function renderStatus(status = {}) {
   const modeEl = document.querySelector('#stat-mode strong');
   modeEl.textContent = status.mode || '--';
   modeEl.className = `mode-chip ${status.mode || 'unknown'}`;
+  currentMode = status.mode || currentMode;
+  const modeSelect = document.getElementById('mode-select-input');
+  if (modeSelect && currentMode) {
+    modeSelect.value = currentMode;
+  }
   document.querySelector('#stat-racks strong').textContent = status.tracked_racks ?? 0;
   document.querySelector('#stat-ingest strong').textContent = formatTime(status.last_ingest_ts);
   const telMeta = document.getElementById('telemetry-updated');
@@ -157,10 +163,12 @@ function renderActions(actions = []) {
     if (summaryMeta) summaryMeta.textContent = 'No actions queued';
     return;
   }
-  if (summaryMeta) summaryMeta.textContent = `${actions[0].mode} Â· ${actions[0].reason || 'controller event'}`;
+  if (summaryMeta) {
+    summaryMeta.textContent = `${actions[0].mode} – ${actions[0].reason || 'controller event'}`;
+  }
   actions.forEach((action) => {
     const cmd = action.cmd || {};
-    const explain = cmd.explain?.message || '--';
+    const explain = cmd.explain?.message || cmd.explain?.triggers?.join(', ') || action.reason || '--';
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${action.id ?? '--'}</td>
@@ -493,6 +501,11 @@ async function loadMode() {
     const data = await res.json();
     const toggle = document.getElementById('auto-toggle');
     if (toggle) toggle.checked = data.auto_enabled;
+    currentMode = data.mode || currentMode;
+    const modeSelect = document.getElementById('mode-select-input');
+    if (modeSelect && currentMode) {
+      modeSelect.value = currentMode;
+    }
   } catch (err) {
     console.error('mode fetch failed', err);
   }
@@ -504,8 +517,26 @@ function initModeToggle() {
     toggle.addEventListener('change', async (e) => {
       try {
         await postJSON('/mode', { auto_enabled: e.target.checked });
+
+function initModeSelect() {
+  const select = document.getElementById('mode-select-input');
+  if (!select) return;
+  select.addEventListener('change', async (e) => {
+    const value = e.target.value;
+    try {
+      await postJSON('/mode', { mode: value });
+      currentMode = value;
+    } catch (err) {
+      alert(err.message || 'Failed to change mode');
+      if (currentMode) {
+        select.value = currentMode;
+      }
+    }
+  });
+}
       } catch (err) {
         alert(err.message || 'Failed to update mode');
+        toggle.checked = !e.target.checked;
       }
     });
   }
@@ -532,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSimulatorImport();
   initHistorySelector();
   initModeToggle();
+  initModeSelect();
   loadMode();
   loadDevices();
   loadTemplates();
