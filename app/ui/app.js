@@ -1,4 +1,4 @@
-const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
+ï»¿const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
 
 let lastDiscoveryPayload = null;
 let currentRack = null;
@@ -76,7 +76,7 @@ function renderStatus(status = {}) {
   const ingestCard = document.querySelector('#summary-ingest .value');
   const ingestMeta = document.getElementById('summary-ingest-meta');
   if (ingestCard) ingestCard.textContent = (status.ingest_count ?? 0).toLocaleString();
-  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetry…';
+  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetryâ€¦';
   const autoToggle = document.getElementById('auto-toggle');
   if (autoToggle && typeof status.auto_enabled === 'boolean') {
     autoToggle.checked = status.auto_enabled;
@@ -141,7 +141,7 @@ function renderHistory(points = []) {
   }
   points.slice().reverse().forEach((pt) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${pt.ts}</span><span>${pt.temp_c ?? '--'} °C</span>`;
+    li.innerHTML = `<span>${pt.ts}</span><span>${pt.temp_c ?? '--'} Â°C</span>`;
     list.appendChild(li);
   });
 }
@@ -157,7 +157,7 @@ function renderActions(actions = []) {
     if (summaryMeta) summaryMeta.textContent = 'No actions queued';
     return;
   }
-  if (summaryMeta) summaryMeta.textContent = `${actions[0].mode} · ${actions[0].reason || 'controller event'}`;
+  if (summaryMeta) summaryMeta.textContent = `${actions[0].mode} Â· ${actions[0].reason || 'controller event'}`;
   actions.forEach((action) => {
     const cmd = action.cmd || {};
     const explain = cmd.explain?.message || '--';
@@ -230,7 +230,9 @@ function renderDevices(devices = []) {
       <td>${dev.type || '--'}</td>
       <td>${dev.proto || '--'}</td>
       <td>${dev.host}</td>
-      <td>${dev.port || '--'}</td>`;
+      <td>${dev.port || '--'}</td>
+      <td><button class="text-btn" data-device="${dev.id}">Remove</button></td>`;
+    tr.querySelector('button').addEventListener('click', () => deleteDevice(dev.id));
     body.appendChild(tr);
   });
 }
@@ -381,6 +383,22 @@ async function approveAction(id) {
     await postJSON('/actions/approve', { id });
   } catch (err) {
     alert(err.message || 'Failed to comply');
+  }
+}
+
+async function deleteDevice(id) {
+  if (!confirm(`Remove device ${id}?`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || res.statusText);
+    }
+    await loadDevices();
+  } catch (err) {
+    alert(err.message || 'Failed to remove device');
   }
 }
 

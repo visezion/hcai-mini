@@ -101,6 +101,27 @@ def devices() -> Dict[str, Any]:
     return get_devices()
 
 
+@app.get("/devices/summary")
+def devices_summary() -> Dict[str, Any]:
+    data = get_devices()
+    devices = data.get("devices", [])
+    enriched = []
+    for device in devices:
+        rack = device.get("rack")
+        latest = db.latest_point(rack) if rack else None
+        enriched.append({**device, "latest": latest})
+    return {"devices": enriched}
+
+@app.delete("/devices/{device_id}")
+def delete_device(device_id: str) -> Dict[str, Any]:
+    removed = engine.remove_device_entry(device_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="device not found")
+    payload = {"device_id": device_id, "ts": datetime.now(timezone.utc).isoformat()}
+    bus.publish("discover/removed", payload)
+    return {"status": "removed", "device_id": device_id}
+
+
 def load_templates() -> List[Dict[str, Any]]:
     path = Path(settings.template_dir)
     templates: List[Dict[str, Any]] = []

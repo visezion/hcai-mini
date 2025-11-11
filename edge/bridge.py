@@ -73,6 +73,11 @@ class DeviceRegistry:
         if not device_id:
             return
         self.devices[device_id] = payload
+        # ensure config file on disk already updated by controller
+
+    def remove_device(self, device_id: str) -> None:
+        if device_id in self.devices:
+            del self.devices[device_id]
 
     def get_device(self, device_id: str) -> Dict[str, Any]:
         return self.devices.get(device_id, {})
@@ -306,6 +311,16 @@ def on_discover_approved(_client, _userdata, msg) -> None:
     sync_pollers()
 
 
+def on_device_removed(_client, _userdata, msg) -> None:
+    payload = json.loads(msg.payload.decode())
+    device_id = payload.get("device_id")
+    if not device_id:
+        return
+    registry.remove_device(device_id)
+    registry.reload()
+    sync_pollers()
+
+
 def self_test_device(device: Dict[str, Any]) -> None:
     if device.get("proto") != "modbus":
         return
@@ -321,9 +336,11 @@ client.on_message = lambda *_: None
 client.message_callback_add("ctrl/+/set", on_command)
 client.message_callback_add("ctrl/discover/start", on_discover)
 client.message_callback_add("discover/approved", on_discover_approved)
+client.message_callback_add("discover/removed", on_device_removed)
 client.connect(HOST, PORT, 60)
 client.subscribe("ctrl/+/set", qos=1)
 client.subscribe("ctrl/discover/start", qos=1)
 client.subscribe("discover/approved", qos=1)
+client.subscribe("discover/removed", qos=1)
 sync_pollers()
 client.loop_forever()

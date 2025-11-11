@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from ..config import append_device, get_policy, get_settings
+from ..config import append_device, get_policy, get_settings, remove_device
 from ..features import FeatureStore
 from ..metrics import (
     DISCOVER_DEVICES_APPROVED_TOTAL,
@@ -230,6 +230,12 @@ class DecisionEngine:
         DISCOVER_DEVICES_APPROVED_TOTAL.inc()
         record_audit(self.db, "system", "discover_approve", {**device, "action": action})
         return action
+
+    def remove_device_entry(self, device_id: str) -> bool:
+        removed = remove_device(device_id)
+        if removed:
+            record_audit(self.db, "system", "device_remove", {"device_id": device_id})
+        return removed
 
     def get_recent_actions(self, limit: int = 10) -> List[Dict[str, Any]]:
         return self.db.latest("actions", limit)

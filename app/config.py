@@ -86,3 +86,18 @@ def append_device(entry: Dict[str, Any]) -> str:
     with path.open("w", encoding="utf-8") as handle:
         yaml.safe_dump(devices, handle, sort_keys=False)
     return action
+
+
+def remove_device(device_id: str) -> bool:
+    settings = get_settings()
+    devices = get_devices()
+    devices_list = devices.get("devices", [])
+    new_list = [item for item in devices_list if item.get("id") != device_id]
+    if len(new_list) == len(devices_list):
+        return False
+    devices["devices"] = new_list
+    path = Path(settings.devices_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(devices, handle, sort_keys=False)
+    return True

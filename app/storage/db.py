@@ -119,6 +119,15 @@ class DB:
             rows = cur.fetchall()
             return [dict(r) for r in rows]
 
+    def latest_point(self, rack: str) -> Dict[str, Any] | None:
+        with self.lock:
+            cur = self.conn.execute(
+                "SELECT ts, temp_c, hum_pct, power_kw, airflow_cfm FROM telemetry WHERE rack = ? ORDER BY ts DESC LIMIT 1",
+                (rack,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
     def record_action(self, action: Dict[str, Any]) -> int:
         payload = action.copy()
         if isinstance(payload.get("cmd_json"), dict):
