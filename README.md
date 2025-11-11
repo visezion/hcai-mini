@@ -78,6 +78,20 @@ The simulator dashboard is built with plain React (ES modules) so you do not nee
 
 Need real devices for actions? Use the **Import simulator** button on the Setup tab (or call `POST /simulator/devices/import`) to pull the simulated CRACs into `config/devices.yaml`. Approved devices show up in the inventory grid, the controller maps each rack to its simulated device ID, and AI actions you approve will now drive the simulator (which publishes receipts back on `ctrl/<device_id>/receipt`).
 
+### React “Simulator Pro” dashboard
+
+For a richer showcase experience we ship a standalone React + Tailwind dashboard under `simulator-ui/`.
+
+Build and publish it into the FastAPI static directory:
+
+```bash
+cd simulator-ui
+npm install
+npm run build    # outputs to ../app/ui/sim-react
+```
+
+Browse to `http://<host>:8080/sim-pro` for the compiled experience (light/dark aware, capacity widgets, diagnostics, etc.). During development run `npm run dev` and point your browser to the indicated Vite dev server; the API base URL is still configured inside the page via the “Controller URL” input (stored in `localStorage` as `dc_api_base`).
+
 ## Keeping your deployment up to date
 
 1. Pull the latest code:

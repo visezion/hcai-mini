@@ -53,6 +53,9 @@ scheduler_task = None
 
 if settings.ui_enable:
     app.mount("/ui", StaticFiles(directory="app/ui", html=True), name="ui")
+    sim_path = Path("app/ui/sim-react")
+    if sim_path.exists():
+        app.mount("/sim-pro", StaticFiles(directory=sim_path, html=True), name="sim-pro")
 
 SIMULATOR_URL = os.environ.get("SIMULATOR_URL", "http://localhost:9100")
 
