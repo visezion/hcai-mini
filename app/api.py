@@ -79,12 +79,33 @@ def approve_device(device: Dict[str, Any]) -> Dict[str, Any]:
     return {"status": "approved", "device": device}
 
 
+@app.get("/actions")
+def actions(limit: int = 20) -> Dict[str, Any]:
+    return {"actions": engine.get_recent_actions(limit)}
+
+
+@app.get("/anomalies")
+def anomalies(limit: int = 20) -> Dict[str, Any]:
+    return {"anomalies": engine.get_recent_anomalies(limit)}
+
+
+@app.get("/status")
+def status() -> Dict[str, Any]:
+    return engine.get_status()
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     try:
         while True:
-            payload = {"tiles": engine.latest_tiles, "discover": engine.list_discoveries()}
+            payload = {
+                "tiles": engine.latest_tiles,
+                "discover": engine.list_discoveries(),
+                "actions": engine.get_recent_actions(5),
+                "anomalies": engine.get_recent_anomalies(5),
+                "status": engine.get_status(),
+            }
             await websocket.send_json(payload)
             await asyncio.sleep(1)
     except WebSocketDisconnect:

@@ -43,6 +43,9 @@ class DecisionEngine:
         }
         self.discovery_deadline: datetime | None = None
         self.discovery_timeout = self.settings.discovery_timeout_s
+        self.ingest_count = 0
+        self.last_ingest_ts: str | None = None
+        self.started_at = datetime.now(timezone.utc)
 
     def handle_message(self, _client, _userdata, msg) -> None:
         topic = msg.topic
@@ -95,11 +98,14 @@ class DecisionEngine:
                 "raw_json": json.dumps(data),
             },
         )
+        ts = data.get("ts")
         self.latest_tiles[rack] = {
-            "ts": data.get("ts"),
+            "ts": ts,
             "metrics": metrics,
         }
         self._maybe_act(rack)
+        self.ingest_count += 1
+        self.last_ingest_ts = ts
 
     def _maybe_act(self, rack: str) -> None:
         window = self.feature_store.get_window(rack, "temp_c")
@@ -190,3 +196,21 @@ class DecisionEngine:
     def approve_device(self, device: Dict[str, Any]) -> None:
         append_device(device)
         record_audit(self.db, "system", "discover_approve", device)
+
+    def get_recent_actions(self, limit: int = 10) -> List[Dict[str, Any]]:
+        return self.db.latest("actions", limit)
+
+    def get_recent_anomalies(self, limit: int = 10) -> List[Dict[str, Any]]:
+        return self.db.latest("anomalies", limit)
+
+    def get_status(self) -> Dict[str, Any]:
+        uptime = datetime.now(timezone.utc) - self.started_at
+        return {
+            "mode": self.mode,
+            "site": self.policy.get("site", "unknown"),
+            "ingest_count": self.ingest_count,
+            "last_ingest_ts": self.last_ingest_ts,
+            "tracked_racks": len(self.latest_tiles),
+            "uptime_s": int(uptime.total_seconds()),
+            "discovery": self.discovery_state,
+        }

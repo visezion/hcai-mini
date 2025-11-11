@@ -2,35 +2,93 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>hcai-mini</title>
+    <title>hcai-mini dashboard</title>
     <link rel="stylesheet" href="/ui/styles.css" />
   </head>
   <body>
-    <header>
-      <h1>hcai-mini</h1>
-      <nav>
-        <button data-page="overview" class="active">Overview</button>
-        <button data-page="actions">Actions</button>
-        <button data-page="discovery">Network Discovery</button>
-      </nav>
+    <header class="topbar">
+      <div class="brand">
+        <h1>hcai-mini</h1>
+        <p class="subtitle">Smart datacenter control plane</p>
+      </div>
+      <div class="status-cards">
+        <div class="stat" id="stat-site">
+          <span>Site</span>
+          <strong>--</strong>
+        </div>
+        <div class="stat" id="stat-mode">
+          <span>Mode</span>
+          <strong>--</strong>
+        </div>
+        <div class="stat" id="stat-racks">
+          <span>Tracked racks</span>
+          <strong>0</strong>
+        </div>
+        <div class="stat" id="stat-ingest">
+          <span>Last ingest</span>
+          <strong>--</strong>
+        </div>
+      </div>
     </header>
-    <main>
-      <section id="overview" class="page active">
-        <h2>Telemetry</h2>
+
+    <main class="dashboard">
+      <section class="panel wide" id="telemetry-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Telemetry</h2>
+            <p>Live rack metrics with rolling updates</p>
+          </div>
+          <div class="panel-meta" id="telemetry-updated">Updated --</div>
+        </div>
         <div id="tiles" class="grid"></div>
       </section>
-      <section id="actions" class="page">
-        <h2>Actions (placeholder)</h2>
-        <p>Future table of actions and approvals.</p>
-      </section>
-      <section id="discovery" class="page">
-        <h2>Network Discovery</h2>
-        <div class="controls">
-          <input id="subnet" type="text" value="10.0.0.0/24" />
-          <button id="start-discovery">Discover Devices</button>
+
+      <section class="panel" id="actions-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Controller actions</h2>
+            <p>Most recent proposals / commands</p>
+          </div>
         </div>
-        <div id="discovery-status" class="status-chip">Idle</div>
-        <table>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Device</th>
+              <th>Mode</th>
+              <th>Reason</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="actions-body">
+            <tr><td colspan="5">No actions yet</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel" id="alerts-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Anomalies & alerts</h2>
+            <p>Latest VAE scores per rack</p>
+          </div>
+        </div>
+        <ul id="anomalies-list" class="list"></ul>
+      </section>
+
+      <section class="panel wide" id="discovery-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Network discovery</h2>
+            <p>Find Modbus/BACnet/SNMP endpoints automatically</p>
+          </div>
+          <div class="discovery-controls">
+            <input id="subnet" type="text" value="10.0.0.0/24" />
+            <button id="start-discovery">Discover devices</button>
+            <span id="discovery-status" class="status-chip">Idle</span>
+          </div>
+        </div>
+        <table class="table">
           <thead>
             <tr><th>IP</th><th>Protocol</th><th>Guess</th><th>Approve</th></tr>
           </thead>
@@ -38,6 +96,11 @@
         </table>
       </section>
     </main>
+
+    <footer>
+      <small>hcai-mini &copy; 2025 � MQTT topics: site/&lt;site&gt;/rack/&lt;rack&gt; | ctrl/&lt;device&gt;</small>
+    </footer>
+
     <script src="/ui/app.js"></script>
   </body>
 </html>
