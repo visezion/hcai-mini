@@ -61,6 +61,30 @@ hcai-mini is a compact edge-ready control plane for smart data centers. It inges
 
 The `scripts/setup.sh` installer is idempotent; rerun it whenever you build a new node and it will ensure every dependency (Docker Engine, Compose plugin, Mosquitto broker, system packages) is present and enabled as a service.
 
+## Keeping your deployment up to date
+
+1. Pull the latest code:
+   ```bash
+   cd /opt/hcai-mini
+   git fetch origin
+   git checkout main
+   git pull origin main
+   ```
+2. Rebuild and restart the containers so changes take effect:
+   ```bash
+   make down
+   docker compose build hcai-mini hcai-edge
+   make up
+   ```
+3. Validate:
+   ```bash
+   docker compose ps
+   curl http://localhost:8080/health
+   ```
+4. Review release notes/commits for config changes; if new fields were added to `config/policy.yaml` or `config/devices.yaml`, merge them into your site-specific copies before restarting.
+
+For fully automated updates, wrap the commands above in a cron job or CI workflow and run them during a maintenance window.
+
 ## Step-by-step (local development)
 
 1. Launch the API service:
@@ -134,3 +158,12 @@ Set environment variables (MQTT_URL, credentials, MODE, etc.) in `docker-compose
 - Extend `edge/discover.py` to include BACnet Who-Is and SNMP sysObjectID fingerprinting.
 - Integrate HMAC signing between hcai-mini and hcai-edge for command authenticity.
 - Add Grafana/Influx or Prometheus scraping for long-term observability.
+- **Contribute changes**:
+  ```bash
+  git checkout -b feature/<short-name>
+  # edit files, run tests
+  git status
+  git commit -am "feat: short description"
+  git push origin feature/<short-name>
+  ```
+  Then open a pull request in [github.com/visezion/hcai-mini](https://github.com/visezion/hcai-mini) so the new functionality can be reviewed and merged.
