@@ -1,4 +1,4 @@
 paho-mqtt
 PyYAML
 pymodbus
-pysnmp
+pysnmp==4.4.12
