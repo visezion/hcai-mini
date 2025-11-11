@@ -6,3 +6,5 @@ PyYAML
 pymodbus
 aiofiles
 prometheus_client
+requests
+requests

@@ -61,6 +61,21 @@ hcai-mini is a compact edge-ready control plane for smart data centers. It inges
 
 The `scripts/setup.sh` installer is idempotent; rerun it whenever you build a new node and it will ensure every dependency (Docker Engine, Compose plugin, Mosquitto broker, system packages) is present and enabled as a service.
 
+## Simulator + GUI-only demo
+
+Need to showcase hcai-mini without touching live hardware? Start the simulator container and open the dedicated React dashboard.
+
+1. Launch the simulator alongside the main stack:
+   ```bash
+   docker compose up -d hcai-mini hcai-edge hcai-sim
+   ```
+2. Browse to `http://<server>:8080/ui/simulator.html`.
+3. (Optional) Point the page at another controller by pasting its base URL in the top-right field and clicking **Apply**.
+4. Use the four scenario tiles (temp spike, cooling failure, sensor dropout, power spike) to drive hcai-sim via `/simulator/scenarios`. The page streams stats, rack tiles, and device inventory via `/tiles`, `/telemetry/history`, and `/devices/summary`.
+5. Flip scenarios off to return to steady state, or clear the input to preview the built-in mock data with no backend at all.
+
+The simulator dashboard is built with plain React (ES modules) so you do not need a separate build step; the static assets live under `app/ui/simulator.*`. It is a safe way to demo the ingest → forecast → control loop with live charts, rack tiles, and scenario toggles driven entirely from the browser.
+
 ## Keeping your deployment up to date
 
 1. Pull the latest code:

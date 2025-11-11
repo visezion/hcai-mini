@@ -41,3 +41,17 @@ services:
     volumes:
       - ./config:/config:ro
       - ./edge/modbus_map.yaml:/maps/modbus_map.yaml:ro
+  hcai-sim:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sim
+    image: local/hcai-sim:latest
+    environment:
+      SIM_MQTT_HOST: "localhost"
+      SIM_SITE: "sim_dc"
+      SIM_RACKS: "R1,R2,R3,R4"
+      SIM_INTERVAL: "2"
+      SIM_API_PORT: "9100"
+    volumes:
+      - ./simulator/control.json:/simulator/control.json
+    network_mode: host

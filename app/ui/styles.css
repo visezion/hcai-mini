@@ -212,6 +212,24 @@ input:checked + .slider:before {
   color: var(--muted);
   font-size: 0.85rem;
 }
+.scenario-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.scenario-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--card-bg);
+  font-size: 0.9rem;
+}
+.scenario-list.empty {
+  color: var(--muted);
+}
 .device-card .metrics span {
   font-size: 0.8rem;
   color: var(--muted);

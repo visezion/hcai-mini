@@ -1,10 +1,12 @@
 import asyncio
 import json
+import os
 import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+import requests
 import yaml
 from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +54,7 @@ scheduler_task = None
 if settings.ui_enable:
     app.mount("/ui", StaticFiles(directory="app/ui", html=True), name="ui")
 
+SIMULATOR_URL = os.environ.get("SIMULATOR_URL", "http://localhost:9100")
 
 @app.on_event("startup")
 async def startup() -> None:
@@ -210,6 +213,29 @@ def approve_action(payload: Dict[str, Any]) -> Dict[str, Any]:
 @app.get("/telemetry/history")
 def telemetry_history(rack: str, limit: int = 120) -> Dict[str, Any]:
     return {"rack": rack, "points": db.telemetry_history(rack, limit)}
+
+
+def _simulator_request(method: str, path: str, data: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    url = f"{SIMULATOR_URL}{path}"
+    try:
+        if method == "get":
+            resp = requests.get(url, timeout=2)
+        else:
+            resp = requests.post(url, json=data, timeout=2)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=503, detail=f"Simulator unavailable: {exc}") from exc
+
+
+@app.get("/simulator/scenarios")
+def simulator_scenarios() -> Dict[str, Any]:
+    return _simulator_request("get", "/scenarios")
+
+
+@app.post("/simulator/scenarios")
+def simulator_set(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _simulator_request("post", "/scenarios", payload)
 
 
 @app.get("/metrics")
