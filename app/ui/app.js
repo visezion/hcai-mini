@@ -133,6 +133,7 @@ function renderAnomalies(anomalies = []) {
 let lastDiscoveryPayload = null;
 const approvedDevices = new Set();
 let devicesCache = [];
+let templatesCache = [];
 const discoveryHistory = [];
 
 async function loadDevices() {
@@ -141,11 +142,50 @@ async function loadDevices() {
     const data = await res.json();
     const devices = data.devices || [];
     devicesCache = devices;
+    devices.forEach((dev) => {
+      if (dev.proto && dev.host) {
+        approvedDevices.add(`${dev.proto}:${dev.host}`);
+      }
+    });
     renderDevices(devices);
+    if (lastDiscoveryPayload) {
+      renderDiscovery(lastDiscoveryPayload);
+    }
   } catch (err) {
     console.error('device fetch failed', err);
     renderDevices([]);
   }
+}
+
+async function loadTemplates() {
+  try {
+    const res = await fetch('/templates');
+    const data = await res.json();
+    templatesCache = data.templates || [];
+    renderTemplates(templatesCache);
+  } catch (err) {
+    console.error('template fetch failed', err);
+    renderTemplates([]);
+  }
+}
+
+function renderTemplates(templates = []) {
+  const body = document.getElementById('templates-body');
+  if (!body) return;
+  body.innerHTML = '';
+  if (!templates.length) {
+    body.innerHTML = '<tr><td colspan="5">No templates loaded</td></tr>';
+    return;
+  }
+  templates.forEach((tpl) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${tpl.template || tpl.name || '--'}</td>
+      <td>${tpl.proto || '--'}</td>
+      <td>${tpl.type || '--'}</td>
+      <td>${tpl.map || '--'}</td>
+      <td>${tpl.file || '--'}</td>`;
+    body.appendChild(tr);
+  });
 }
 
 function renderDevices(devices = []) {
@@ -284,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initDiscoveryButton();
   loadDevices();
+  loadTemplates();
   initWebSocket();
 });
 

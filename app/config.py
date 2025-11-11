@@ -21,6 +21,7 @@ class Settings:
     discovery_topic: str = os.environ.get("DISCOVERY_TOPIC", "ctrl/discover")
     discovery_timeout_s: int = int(os.environ.get("DISCOVERY_TIMEOUT_S", "180"))
     discovery_interval_hours: int = int(os.environ.get("DISCOVERY_INTERVAL_HOURS", "6"))
+    template_dir: str = os.environ.get("DISCOVERY_TEMPLATE_DIR", "./config/templates")
 
 
 @lru_cache

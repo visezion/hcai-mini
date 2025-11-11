@@ -121,9 +121,9 @@ For fully automated updates, wrap the commands above in a cron job or CI workflo
    - Receipts from hcai-edge are stored under the **Actions** view and in the `receipts` table for audit.
 
 4. **Monitor health.**
-- `/health` reports service status.
-- `make logs` tails both containers.
-- Prometheus-style metrics live at `/metrics` (stubbed in this skeleton; extend as needed).
+   - `/health` reports service status.
+   - `make logs` tails both containers.
+   - Prometheus metrics live at `/metrics` (discover counters, duration histogram, etc.).
 
 5. **Review device inventory.**
    - The **Device inventory** panel in the UI lists every entry from `config/devices.yaml` (including items approved via auto-discovery) so you always know what the AI can control.
@@ -157,6 +157,25 @@ Discovery scans can take up to several minutes on large subnets. Adjust `DISCOVE
 - Discovery never edits `devices.yaml` without operator approval.
 - Limits, rate-of-change, and watchdogs are enforced before any command is sent.
 - All control events write to SQLite (`/data/hcai.sqlite`) for audits and receipts.
+
+## Auto network discovery (“auto-can”)
+
+hcai-mini now includes an end-to-end automatic onboarding workflow:
+
+1. **Automatic subnet scanning** – hcai-edge probes every host in `DISCOVERY_SUBNET`, rate-limited by `DISCOVERY_IPS_PER_MIN`, and reports raw hits to `discover/raw`.
+2. **Protocol fingerprinting** – Modbus device IDs, SNMP `sysObjectID`, BACnet Who-Is, and MQTT handshake detection classify each IP.
+3. **Template matching** – fingerprints are matched against `/config/templates/*.yaml`; the resulting template provides the correct map/write policy.
+4. **Structured MQTT results** – summarized devices are published to `discover/results` for FastAPI + UI consumption.
+5. **Operator approvals** – `/discover/approve` persists a device, emits `discover/approved`, updates audits, and updates the Device Inventory instantly.
+6. **Dynamic runtime registration** – hcai-edge reloads devices on the fly (no restart) and runs a read-only self-check before allowing writes.
+7. **Continuous background scans** – scheduler triggers discovery every `DISCOVERY_INTERVAL_HOURS` (default 6h) so new hardware is never missed.
+8. **Safety controls** – read-only probes, rate limiting, `DISCOVERY_ENABLED` master toggle, and `/data/discovery.log` keep scans safe and traceable.
+9. **UI integration** – the Network Discovery panel shows status chips, subnet picker, history log, candidate list, and Approve buttons with instant feedback.
+10. **Audit + metrics** – every scan/approval is stored in the `audits` table; Prometheus counters (`discover_*`) expose performance in `/metrics`.
+11. **Template registry** – drop new YAML templates under `config/templates/` to teach hcai-mini about additional vendors/models.
+12. **Device inventory & telemetry** – approved devices appear immediately in the dashboard, `/devices` API, and the edge bridge’s runtime registry.
+
+Key environment toggles: `DISCOVERY_SUBNET`, `DISCOVERY_IPS_PER_MIN`, `DISCOVERY_SNMP_COMMUNITY`, `DISCOVERY_TEMPLATE_DIR`, `DISCOVERY_INTERVAL_HOURS`, and `DISCOVERY_ENABLED`.
 
 ## Next steps
 

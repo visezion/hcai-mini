@@ -72,7 +72,9 @@ class DecisionEngine:
             })
         elif topic == "discover/raw":
             data = json.loads(payload)
-            self.discovery_history.append({"ts": data.get("ts"), "raw": data.get("raw", [])})
+            raw_entries = data.get("raw", [])
+            self.discovery_history.append({"ts": data.get("ts"), "raw_count": len(raw_entries)})
+            self.discovery_history = self.discovery_history[-50:]
         elif topic == "discover/results":
             data = json.loads(payload)
             self.discovery_results = data.get("devices", [])

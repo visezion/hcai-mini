@@ -134,8 +134,8 @@ class DiscoveryService:
 
     @staticmethod
     def _probe_udp(ip: str, port: int) -> bool:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.settimeout(0.5)
             who_is = bytes.fromhex("810b000c0120ffffffff")  # minimal BACnet BVLC Who-Is
             sock.sendto(who_is, (ip, port))
@@ -167,6 +167,8 @@ class DiscoveryService:
         try:
             if not client.connect():
                 return None
+            if not hasattr(client, "read_device_info"):
+                return {"vendor": "modbus_device", "model": "unknown"}
             result = client.read_device_info()
             if not result.isError():
                 vendor = b"".join(result.information.get(0x00, [])).decode(errors="ignore")

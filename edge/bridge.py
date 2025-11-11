@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict
@@ -39,14 +40,14 @@ class DeviceRegistry:
             with self.devices_path.open("r", encoding="utf-8") as handle:
                 data = yaml.safe_load(handle) or {}
             self.devices = {item["id"]: item for item in data.get("devices", [])}
+            self.maps = data.get("maps", {})
         else:
             self.devices = {}
+            self.maps = {}
         if self.map_file.exists():
             with self.map_file.open("r", encoding="utf-8") as handle:
                 data = yaml.safe_load(handle) or {}
-            self.maps = data.get("maps", {})
-        else:
-            self.maps = {}
+            self.maps.update(data.get("maps", {}))
 
     def update_from_payload(self, payload: Dict[str, Any]) -> None:
         device_id = payload.get("id")
@@ -138,14 +139,27 @@ def on_discover(_client, _userdata, msg) -> None:
     payload = json.loads(msg.payload.decode())
     subnet = payload.get("subnet", "10.0.0.0/24")
     actor = payload.get("actor", "system")
-    publish_discovery(subnet, actor)
+    threading.Thread(target=publish_discovery, args=(subnet, actor), daemon=True).start()
 
 
 def on_discover_approved(_client, _userdata, msg) -> None:
     payload = json.loads(msg.payload.decode())
     registry.update_from_payload(payload.get("device", {}))
-    # optional quick reload to capture file changes
     registry.reload()
+    device = registry.get_device(payload.get("device", {}).get("id", ""))
+    if device:
+        self_test_device(device)
+
+
+def self_test_device(device: Dict[str, Any]) -> None:
+    if device.get("proto") != "modbus":
+        return
+    client_mb = ModbusTcpClient(device["host"], port=device.get("port", 502), timeout=1)
+    try:
+        if client_mb.connect():
+            client_mb.read_device_info()
+    finally:
+        client_mb.close()
 
 
 client.on_message = lambda *_: None

@@ -1,7 +1,9 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
+import yaml
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -95,6 +97,25 @@ def approve_device(device: Dict[str, Any]) -> Dict[str, Any]:
 @app.get("/devices")
 def devices() -> Dict[str, Any]:
     return get_devices()
+
+
+def load_templates() -> List[Dict[str, Any]]:
+    path = Path(settings.template_dir)
+    templates: List[Dict[str, Any]] = []
+    if not path.exists():
+        return templates
+    for file in path.glob("*.yaml"):
+        with file.open("r", encoding="utf-8") as handle:
+            item = yaml.safe_load(handle) or {}
+            if item:
+                item["file"] = file.name
+                templates.append(item)
+    return templates
+
+
+@app.get("/templates")
+def list_templates() -> Dict[str, Any]:
+    return {"templates": load_templates()}
 
 
 @app.get("/actions")
