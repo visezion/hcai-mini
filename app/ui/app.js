@@ -1,4 +1,4 @@
-ï»¿const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
+const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
 
 let lastDiscoveryPayload = null;
 let currentRack = null;
@@ -164,7 +164,7 @@ function renderActions(actions = []) {
     return;
   }
   if (summaryMeta) {
-    summaryMeta.textContent = `${actions[0].mode} – ${actions[0].reason || 'controller event'}`;
+    summaryMeta.textContent = `${actions[0].mode} - ${actions[0].reason || 'controller event'}`;
   }
   actions.forEach((action) => {
     const cmd = action.cmd || {};
