@@ -2,5 +2,5 @@ FROM python:3.11-slim
 WORKDIR /sim
 COPY simulator/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY simulator ./simulator
+COPY simulator/simulator ./simulator
 CMD ["python", "-m", "simulator.main"]
