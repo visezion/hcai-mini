@@ -8,8 +8,11 @@
   </head>
   <body>
     <div id="sim-root">
-      <div class="loading">Loading simulator…</div>
+      <div class="loading">Loading simulator...</div>
     </div>
-    <script type="module" src="/ui/simulator.js"></script>
+    <script src="/ui/vendor/react.production.min.js"></script>
+    <script src="/ui/vendor/react-dom.production.min.js"></script>
+    <script src="/ui/vendor/babel.min.js"></script>
+    <script type="text/babel" data-presets="env,react" src="/ui/simulator.js"></script>
   </body>
 </html>

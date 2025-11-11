@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "https://esm.sh/react@18.2.0";
-import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
+const { useEffect, useMemo, useRef, useState } = React;
+const { createRoot } = ReactDOM;
 
 const DEFAULT_BASE =
   (window.localStorage.getItem("hcai-sim-base") || window.location.origin || "").trim();
