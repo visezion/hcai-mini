@@ -55,6 +55,7 @@ class DecisionEngine:
         self.last_ingest_ts: str | None = None
         self.started_at = datetime.now(timezone.utc)
         self.auto_enabled = True
+        self.dynamic_devices: Dict[str, str] = {}
         self.devices_path = Path(self.settings.devices_path)
         self.devices_mtime = 0.0
         self.rack_device_map: Dict[str, str] = {}
@@ -108,6 +109,9 @@ class DecisionEngine:
     def _handle_telemetry(self, data: Dict[str, Any]) -> None:
         rack = data.get("rack", "unknown")
         metrics = data.get("metrics", {})
+        device_id = data.get("device_id")
+        if device_id and rack:
+            self.dynamic_devices[rack] = device_id
         temp = metrics.get("temp_c")
         if temp is not None:
             self.feature_store.push(rack, "temp_c", temp)
@@ -357,6 +361,8 @@ class DecisionEngine:
             self.devices_mtime = 0.0
 
     def _device_for_rack(self, rack: str) -> str | None:
+        if rack in self.dynamic_devices:
+            return self.dynamic_devices[rack]
         try:
             current_mtime = self.devices_path.stat().st_mtime
         except FileNotFoundError:

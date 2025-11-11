@@ -1,4 +1,4 @@
-﻿const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
+ï»¿const DEFAULT_PORTS = { modbus: 502, snmp: 161, bacnet: 47808, mqtt: 1883 };
 
 let lastDiscoveryPayload = null;
 let currentRack = null;
@@ -82,7 +82,7 @@ function renderStatus(status = {}) {
   const ingestCard = document.querySelector('#summary-ingest .value');
   const ingestMeta = document.getElementById('summary-ingest-meta');
   if (ingestCard) ingestCard.textContent = (status.ingest_count ?? 0).toLocaleString();
-  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetry…';
+  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetryâ€¦';
   const autoToggle = document.getElementById('auto-toggle');
   if (autoToggle && typeof status.auto_enabled === 'boolean') {
     autoToggle.checked = status.auto_enabled;
@@ -147,7 +147,7 @@ function renderHistory(points = []) {
   }
   points.slice().reverse().forEach((pt) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${pt.ts}</span><span>${pt.temp_c ?? '--'} °C</span>`;
+    li.innerHTML = `<span>${pt.ts}</span><span>${pt.temp_c ?? '--'} Â°C</span>`;
     list.appendChild(li);
   });
 }
@@ -164,7 +164,7 @@ function renderActions(actions = []) {
     return;
   }
   if (summaryMeta) {
-    summaryMeta.textContent = `${actions[0].mode} � ${actions[0].reason || 'controller event'}`;
+    summaryMeta.textContent = `${actions[0].mode} – ${actions[0].reason || 'controller event'}`;
   }
   actions.forEach((action) => {
     const cmd = action.cmd || {};
@@ -262,14 +262,14 @@ function renderDeviceGrid(devices = []) {
         <h3>${dev.id}</h3>
         <span class="chip">${dev.proto || '--'}</span>
       </header>
-      <div class="device-meta">${dev.type || ''} • ${dev.host}:${dev.port || ''}</div>
+      <div class="device-meta">${dev.type || ''} â€¢ ${dev.host}:${dev.port || ''}</div>
       <div class="metrics">
-        <div><span>Temp</span><strong>${latest.temp_c ?? '--'} °C</strong></div>
+        <div><span>Temp</span><strong>${latest.temp_c ?? '--'} Â°C</strong></div>
         <div><span>Humidity</span><strong>${latest.hum_pct ?? '--'} %</strong></div>
         <div><span>Power</span><strong>${latest.power_kw ?? '--'} kW</strong></div>
         <div><span>Airflow</span><strong>${latest.airflow_cfm ?? '--'} cfm</strong></div>
       </div>
-      <small>Rack: ${dev.rack || 'n/a'} • Last: ${latest.ts || '--'}</small>
+      <small>Rack: ${dev.rack || 'n/a'} â€¢ Last: ${latest.ts || '--'}</small>
     `;
     grid.appendChild(card);
   });
@@ -513,10 +513,30 @@ async function loadMode() {
 
 function initModeToggle() {
   const toggle = document.getElementById('auto-toggle');
-  if (toggle) {
-    toggle.addEventListener('change', async (e) => {
-      try {
-        await postJSON('/mode', { auto_enabled: e.target.checked });
+  if (!toggle) return;
+  toggle.addEventListener('change', async (e) => {
+    const checked = e.target.checked;
+    try {
+      await postJSON('/mode', { auto_enabled: checked });
+      const select = document.getElementById('mode-select-input');
+      if (checked && (!currentMode || !currentMode.startsWith('auto'))) {
+        const targetMode = 'auto_safe';
+        if (select) select.value = targetMode;
+        await postJSON('/mode', { mode: targetMode });
+        currentMode = targetMode;
+      }
+      if (!checked && currentMode && currentMode.startsWith('auto')) {
+        const fallback = 'propose';
+        if (select) select.value = fallback;
+        await postJSON('/mode', { mode: fallback });
+        currentMode = fallback;
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update mode');
+      toggle.checked = !checked;
+    }
+  });
+}
 
 function initModeSelect() {
   const select = document.getElementById('mode-select-input');
@@ -533,13 +553,6 @@ function initModeSelect() {
       }
     }
   });
-}
-      } catch (err) {
-        alert(err.message || 'Failed to update mode');
-        toggle.checked = !e.target.checked;
-      }
-    });
-  }
 }
 
 function initWebSocket() {

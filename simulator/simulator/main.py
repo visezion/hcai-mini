@@ -113,6 +113,7 @@ class DataCenterSimulator:
             "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "site": SITE,
             "rack": rack,
+            "device_id": self.device_id(rack),
             "metrics": {k: (None if np.isnan(v) else round(v, 2)) for k, v in self.state[rack].items()},
         }
         publish.single(
