@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -9,7 +9,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>hcai-mini</h1>
-        <p class="subtitle">Predict · Detect · Control · Audit</p>
+        <p class="subtitle">Predict ï¿½ Detect ï¿½ Control ï¿½ Audit</p>
       </div>
       <div class="topbar-actions">
         <div class="theme-toggle">
@@ -62,7 +62,7 @@
         <h3>Ingest</h3>
         <p>Live signals streaming from racks, CRACs, PDUs.</p>
         <div class="value" data-label="messages">--</div>
-        <small id="summary-ingest-meta">Awaiting telemetry…</small>
+        <small id="summary-ingest-meta">Awaiting telemetryï¿½</small>
       </article>
       <article class="summary-card" id="summary-forecast">
         <h3>Forecast</h3>
@@ -119,6 +119,23 @@
         </table>
       </section>
 
+      <section class="panel" id="devices-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Device inventory</h2>
+            <p>All controllable assets from devices.yaml</p>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Type</th><th>Protocol</th><th>Host</th><th>Port</th></tr>
+          </thead>
+          <tbody id="devices-body">
+            <tr><td colspan="5">Loading device listâ€¦</td></tr>
+          </tbody>
+        </table>
+      </section>
+
       <section class="panel" id="alerts-panel">
         <div class="panel-header">
           <div>
@@ -151,9 +168,10 @@
     </main>
 
     <footer>
-      <small>&copy; 2025 hcai-mini · MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; · ctrl/&lt;device&gt;</small>
+      <small>&copy; 2025 hcai-mini ï¿½ MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; ï¿½ ctrl/&lt;device&gt;</small>
     </footer>
 
     <script src="/ui/app.js"></script>
   </body>
 </html>
+

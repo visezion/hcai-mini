@@ -121,9 +121,13 @@ For fully automated updates, wrap the commands above in a cron job or CI workflo
    - Receipts from hcai-edge are stored under the **Actions** view and in the `receipts` table for audit.
 
 4. **Monitor health.**
-   - `/health` reports service status.
-   - `make logs` tails both containers.
-   - Prometheus-style metrics live at `/metrics` (stubbed in this skeleton; extend as needed).
+- `/health` reports service status.
+- `make logs` tails both containers.
+- Prometheus-style metrics live at `/metrics` (stubbed in this skeleton; extend as needed).
+
+5. **Review device inventory.**
+   - The **Device inventory** panel in the UI lists every entry from `config/devices.yaml` (including items approved via auto-discovery) so you always know what the AI can control.
+   - After approving a discovered device, the list refreshes automatically—no need to restart the stack.
 
 ## Repo layout
 

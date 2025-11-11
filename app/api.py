@@ -6,7 +6,7 @@ from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .config import get_settings
+from .config import get_devices, get_settings
 from .features import FeatureStore
 from .mqtt_bus import Bus
 from .models.anomaly_vae import VAEAnomaly
@@ -77,6 +77,11 @@ def list_discoveries() -> Dict[str, Any]:
 def approve_device(device: Dict[str, Any]) -> Dict[str, Any]:
     result = engine.approve_device(device)
     return {"status": "approved", "device": device, "action": result}
+
+
+@app.get("/devices")
+def devices() -> Dict[str, Any]:
+    return get_devices()
 
 
 @app.get("/actions")

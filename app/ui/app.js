@@ -132,6 +132,39 @@ function renderAnomalies(anomalies = []) {
 
 let lastDiscoveryPayload = null;
 const approvedDevices = new Set();
+let devicesCache = [];
+
+async function loadDevices() {
+  try {
+    const res = await fetch('/devices');
+    const data = await res.json();
+    const devices = data.devices || [];
+    devicesCache = devices;
+    renderDevices(devices);
+  } catch (err) {
+    console.error('device fetch failed', err);
+    renderDevices([]);
+  }
+}
+
+function renderDevices(devices = []) {
+  const body = document.getElementById('devices-body');
+  if (!body) return;
+  body.innerHTML = '';
+  if (!devices.length) {
+    body.innerHTML = '<tr><td colspan="5">No devices configured</td></tr>';
+    return;
+  }
+  devices.forEach((dev) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${dev.id}</td>
+      <td>${dev.type || '--'}</td>
+      <td>${dev.proto || '--'}</td>
+      <td>${dev.host}</td>
+      <td>${dev.port || '--'}</td>`;
+    body.appendChild(tr);
+  });
+}
 
 function renderDiscovery(discoverPayload) {
   lastDiscoveryPayload = discoverPayload;
@@ -181,9 +214,10 @@ function renderDiscovery(discoverPayload) {
         btn.disabled = true;
         btn.textContent = 'Saving...';
         try {
-          await postJSON('/discover/approve', payload);
+          const resp = await postJSON('/discover/approve', payload);
           approvedDevices.add(key);
-          btn.textContent = 'Approved';
+          btn.textContent = resp.action === 'updated' ? 'Updated' : 'Approved';
+          loadDevices();
         } catch (err) {
           console.error('approve failed', err);
           btn.disabled = false;
@@ -229,6 +263,7 @@ function initWebSocket() {
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initDiscoveryButton();
+  loadDevices();
   initWebSocket();
 });
 
