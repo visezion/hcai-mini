@@ -43,14 +43,44 @@ def get_devices() -> Dict[str, Any]:
     return _load_yaml(get_settings().devices_path)
 
 
-def append_device(entry: Dict[str, Any]) -> None:
+def append_device(entry: Dict[str, Any]) -> str:
     settings = get_settings()
     devices = get_devices()
     devices_list = devices.get("devices", [])
-    devices_list.append(entry)
-    devices["devices"] = devices_list
+
+    entry = entry.copy()
+    if not entry.get("id"):
+        entry["id"] = f"{entry.get('proto', 'dev')}_{entry.get('host', 'device')}"
+
+    action = "added"
+    replaced = False
+    for idx, existing in enumerate(devices_list):
+        if existing.get("id") == entry["id"]:
+            devices_list[idx] = entry
+            action = "updated"
+            replaced = True
+            break
+        if (
+            entry.get("host") == existing.get("host")
+            and entry.get("proto") == existing.get("proto")
+            and entry.get("port") == existing.get("port")
+        ):
+            devices_list[idx] = entry
+            action = "updated"
+            replaced = True
+            break
+
+    if not replaced:
+        devices_list.append(entry)
+
+    # Ensure there are no duplicate IDs after update
+    deduped = {}
+    for item in devices_list:
+        deduped[item.get("id")] = item
+    devices["devices"] = list(deduped.values())
     devices.setdefault("maps", {})
     path = Path(settings.devices_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         yaml.safe_dump(devices, handle, sort_keys=False)
+    return action

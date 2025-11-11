@@ -75,8 +75,8 @@ def list_discoveries() -> Dict[str, Any]:
 
 @app.post("/discover/approve")
 def approve_device(device: Dict[str, Any]) -> Dict[str, Any]:
-    engine.approve_device(device)
-    return {"status": "approved", "device": device}
+    result = engine.approve_device(device)
+    return {"status": "approved", "device": device, "action": result}
 
 
 @app.get("/actions")

@@ -193,9 +193,10 @@ class DecisionEngine:
             self.discovery_deadline = None
         return {"devices": self.discovery_results, "state": self.discovery_state}
 
-    def approve_device(self, device: Dict[str, Any]) -> None:
-        append_device(device)
-        record_audit(self.db, "system", "discover_approve", device)
+    def approve_device(self, device: Dict[str, Any]) -> str:
+        action = append_device(device)
+        record_audit(self.db, "system", "discover_approve", {**device, "action": action})
+        return action
 
     def get_recent_actions(self, limit: int = 10) -> List[Dict[str, Any]]:
         return self.db.latest("actions", limit)
