@@ -1,0 +1,8 @@
+template: crac_standard
+proto: modbus
+type: crac
+match:
+  vendor: STULZ
+  contains: true
+map: crac_standard
+write: true

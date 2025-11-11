@@ -29,7 +29,7 @@ class Bus:
         self.client.subscribe("site/+/rack/+/telemetry", qos=1)
         self.client.subscribe("device/+/status", qos=1)
         self.client.subscribe("ctrl/+/receipt", qos=1)
-        self.client.subscribe("ctrl/discover/results", qos=1)
+        self.client.subscribe("discover/#", qos=1)
         threading.Thread(target=self.client.loop_forever, daemon=True).start()
 
     def publish(self, topic: str, payload: dict, qos: int = 1, retain: bool = False) -> None:

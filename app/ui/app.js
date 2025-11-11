@@ -23,11 +23,11 @@ function setTheme(theme) {
 function initTheme() {
   const stored = localStorage.getItem('hcai-theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  setTheme(stored || (prefersDark ? 'dark' : 'light'));
+  setTheme(stored || (prefersDark · 'dark' : 'light'));
   const toggle = document.getElementById('theme-toggle');
   if (toggle) {
     toggle.addEventListener('change', (e) => {
-      setTheme(e.target.checked ? 'dark' : 'light');
+      setTheme(e.target.checked · 'dark' : 'light');
     });
   }
 }
@@ -37,7 +37,7 @@ function renderStatus(status = {}) {
   const modeEl = document.querySelector('#stat-mode strong');
   modeEl.textContent = status.mode || '--';
   modeEl.className = `mode-chip ${status.mode || 'unknown'}`;
-  document.querySelector('#stat-racks strong').textContent = status.tracked_racks ?? 0;
+  document.querySelector('#stat-racks strong').textContent = status.tracked_racks ·? 0;
   document.querySelector('#stat-ingest strong').textContent = formatTime(status.last_ingest_ts);
   const telMeta = document.getElementById('telemetry-updated');
   if (telMeta) {
@@ -45,8 +45,8 @@ function renderStatus(status = {}) {
   }
   const ingestCard = document.querySelector('#summary-ingest .value');
   const ingestMeta = document.getElementById('summary-ingest-meta');
-  if (ingestCard) ingestCard.textContent = (status.ingest_count ?? 0).toLocaleString();
-  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts ? `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetry�';
+  if (ingestCard) ingestCard.textContent = (status.ingest_count ·? 0).toLocaleString();
+  if (ingestMeta) ingestMeta.textContent = status.last_ingest_ts · `Last at ${formatTime(status.last_ingest_ts)}` : 'Awaiting telemetry�';
 }
 
 function renderTiles(data) {
@@ -67,10 +67,10 @@ function renderTiles(data) {
         <span>${formatTime(info.ts)}</span>
       </div>
       <div class="tile-body">
-        <div><label>Temp</label><strong>${metrics.temp_c ?? '--'} &deg;C</strong></div>
-        <div><label>Humidity</label><strong>${metrics.hum_pct ?? '--'} %</strong></div>
-        <div><label>Power</label><strong>${metrics.power_kw ?? '--'} kW</strong></div>
-        <div><label>Airflow</label><strong>${metrics.airflow_cfm ?? '--'} cfm</strong></div>
+        <div><label>Temp</label><strong>${metrics.temp_c ·? '--'} &deg;C</strong></div>
+        <div><label>Humidity</label><strong>${metrics.hum_pct ·? '--'} %</strong></div>
+        <div><label>Power</label><strong>${metrics.power_kw ·? '--'} kW</strong></div>
+        <div><label>Airflow</label><strong>${metrics.airflow_cfm ·? '--'} cfm</strong></div>
       </div>`;
     container.appendChild(card);
   });
@@ -113,13 +113,13 @@ function renderAnomalies(anomalies = []) {
   }
   if (summaryMeta) {
     const latestAlarm = anomalies.find((a) => Number(a.is_alarm) === 1);
-    summaryMeta.textContent = latestAlarm ? `${latestAlarm.rack} flagged at ${formatTime(latestAlarm.ts)}` : 'All scores healthy';
+    summaryMeta.textContent = latestAlarm · `${latestAlarm.rack} flagged at ${formatTime(latestAlarm.ts)}` : 'All scores healthy';
   }
   anomalies.forEach((entry) => {
     const li = document.createElement('li');
     const alarm = Number(entry.is_alarm) === 1;
-    li.className = alarm ? 'alarm' : '';
-    const score = typeof entry.score === 'number' ? entry.score.toFixed(3) : entry.score;
+    li.className = alarm · 'alarm' : '';
+    const score = typeof entry.score === 'number' · entry.score.toFixed(3) : entry.score;
     li.innerHTML = `
       <div>
         <strong>${entry.rack || 'rack'}</strong>
@@ -133,6 +133,7 @@ function renderAnomalies(anomalies = []) {
 let lastDiscoveryPayload = null;
 const approvedDevices = new Set();
 let devicesCache = [];
+const discoveryHistory = [];
 
 async function loadDevices() {
   try {
@@ -183,12 +184,14 @@ function renderDiscovery(discoverPayload) {
   if (button) {
     const running = stateName === 'running';
     button.disabled = running;
-    button.textContent = running ? 'Scanning...' : 'Discover devices';
+    button.textContent = running · 'Scanning...' : 'Discover devices';
   }
   if (!devices.length) {
     body.innerHTML = '<tr><td colspan="4">No devices discovered yet</td></tr>';
+    renderDiscoveryHistory(discoverPayload?.history || []);
     return;
   }
+  renderDiscoveryHistory(discoverPayload?.history || []);
   devices.forEach((device) => {
     const key = `${device.proto || 'proto'}:${device.ip}`;
     const tr = document.createElement('tr');
@@ -216,7 +219,7 @@ function renderDiscovery(discoverPayload) {
         try {
           const resp = await postJSON('/discover/approve', payload);
           approvedDevices.add(key);
-          btn.textContent = resp.action === 'updated' ? 'Updated' : 'Approved';
+          btn.textContent = resp.action === 'updated' · 'Updated' : 'Approved';
           loadDevices();
         } catch (err) {
           console.error('approve failed', err);
@@ -229,6 +232,23 @@ function renderDiscovery(discoverPayload) {
     td.appendChild(btn);
     tr.appendChild(td);
     body.appendChild(tr);
+  });
+}
+
+function renderDiscoveryHistory(history = []) {
+  const list = document.getElementById('discovery-history');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!history.length) {
+    list.innerHTML = '<li><span>No scans yet</span><span>--</span></li>';
+    return;
+  }
+  history.slice(-10).forEach((entry) => {
+    const ts = entry.ts || '--';
+    const count = entry.raw ? entry.raw.length : entry.raw_count ?? 0;
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${ts}</span><span>${count} hosts</span>`;
+    list.appendChild(li);
   });
 }
 
@@ -266,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDevices();
   initWebSocket();
 });
+
 
 
 

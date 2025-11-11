@@ -20,6 +20,7 @@ class Settings:
     discovery_subnet: str = os.environ.get("DISCOVERY_SUBNET", "10.0.0.0/24")
     discovery_topic: str = os.environ.get("DISCOVERY_TOPIC", "ctrl/discover")
     discovery_timeout_s: int = int(os.environ.get("DISCOVERY_TIMEOUT_S", "180"))
+    discovery_interval_hours: int = int(os.environ.get("DISCOVERY_INTERVAL_HOURS", "6"))
 
 
 @lru_cache

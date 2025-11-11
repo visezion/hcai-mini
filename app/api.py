@@ -5,6 +5,8 @@ from typing import Any, Dict
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from .config import get_devices, get_settings
 from .features import FeatureStore
@@ -41,6 +43,7 @@ safety = Safety(limits)
 explainer = Explainer()
 bus = Bus()
 engine = DecisionEngine(db, bus, feature_store, forecaster, anomaly, controller, safety)
+scheduler_task = None
 
 if settings.ui_enable:
     app.mount("/ui", StaticFiles(directory="app/ui", html=True), name="ui")
@@ -49,6 +52,13 @@ if settings.ui_enable:
 @app.on_event("startup")
 async def startup() -> None:
     bus.start(engine.handle_message)
+    async def discovery_scheduler():
+        interval = max(1, settings.discovery_interval_hours) * 3600
+        while True:
+            await asyncio.sleep(interval)
+            engine.start_discovery(settings.discovery_subnet, actor="scheduler")
+    global scheduler_task
+    scheduler_task = asyncio.create_task(discovery_scheduler())
 
 
 @app.get("/health")
@@ -64,8 +74,9 @@ def tiles() -> Dict[str, Any]:
 @app.post("/discover/start")
 def discover_start(payload: Dict[str, Any] = Body(default=None)) -> Dict[str, Any]:
     subnet = payload.get("subnet") if payload else settings.discovery_subnet
-    engine.start_discovery(subnet)
-    return {"status": "started", "subnet": subnet}
+    actor = payload.get("actor", "operator") if payload else "operator"
+    engine.start_discovery(subnet, actor)
+    return {"status": "started", "subnet": subnet, "actor": actor}
 
 
 @app.get("/discover")
@@ -76,6 +87,8 @@ def list_discoveries() -> Dict[str, Any]:
 @app.post("/discover/approve")
 def approve_device(device: Dict[str, Any]) -> Dict[str, Any]:
     result = engine.approve_device(device)
+    payload = {"device": device, "action": result, "ts": datetime.now(timezone.utc).isoformat()}
+    bus.publish("discover/approved", payload)
     return {"status": "approved", "device": device, "action": result}
 
 
@@ -97,6 +110,11 @@ def anomalies(limit: int = 20) -> Dict[str, Any]:
 @app.get("/status")
 def status() -> Dict[str, Any]:
     return engine.get_status()
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.websocket("/ws")

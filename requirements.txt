@@ -5,3 +5,4 @@ numpy
 PyYAML
 pymodbus
 aiofiles
+prometheus_client

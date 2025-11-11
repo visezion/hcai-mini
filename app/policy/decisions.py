@@ -4,6 +4,12 @@ from typing import Any, Dict, List
 
 from ..config import append_device, get_policy, get_settings
 from ..features import FeatureStore
+from ..metrics import (
+    DISCOVER_DEVICES_APPROVED_TOTAL,
+    DISCOVER_DEVICES_FOUND_TOTAL,
+    DISCOVER_DURATION_SECONDS,
+    DISCOVER_SCANS_TOTAL,
+)
 from ..models.anomaly_vae import VAEAnomaly
 from ..models.forecaster import Forecaster
 from ..models.mpc import MPCController
@@ -43,6 +49,7 @@ class DecisionEngine:
         }
         self.discovery_deadline: datetime | None = None
         self.discovery_timeout = self.settings.discovery_timeout_s
+        self.discovery_history: List[Dict[str, Any]] = []
         self.ingest_count = 0
         self.last_ingest_ts: str | None = None
         self.started_at = datetime.now(timezone.utc)
@@ -63,10 +70,17 @@ class DecisionEngine:
                 "latency_ms": data.get("latency_ms"),
                 "notes": data.get("notes"),
             })
-        elif topic == "ctrl/discover/results":
+        elif topic == "discover/raw":
+            data = json.loads(payload)
+            self.discovery_history.append({"ts": data.get("ts"), "raw": data.get("raw", [])})
+        elif topic == "discover/results":
             data = json.loads(payload)
             self.discovery_results = data.get("devices", [])
             count = len(self.discovery_results)
+            duration = data.get("duration_s")
+            DISCOVER_DEVICES_FOUND_TOTAL.inc(count)
+            if duration:
+                DISCOVER_DURATION_SECONDS.observe(duration)
             self.discovery_state = {
                 "status": "done",
                 "message": f"Found {count} device(s)" if count else "No devices discovered",
@@ -74,6 +88,7 @@ class DecisionEngine:
                 "completed_at": datetime.now(timezone.utc).isoformat(),
                 "error": None,
             }
+            record_audit(self.db, "system", "discover_results", data)
             self.discovery_deadline = None
         else:
             # ignore
@@ -164,11 +179,12 @@ class DecisionEngine:
         topic = "ctrl/proposals" if self.mode == "propose" else f"ctrl/{action_payload['device_id']}/set"
         self.bus.publish(topic, action_payload)
 
-    def start_discovery(self, subnet: str) -> None:
+    def start_discovery(self, subnet: str, actor: str = "system") -> None:
         now = datetime.now(timezone.utc)
-        payload = {"subnet": subnet, "ts": now.isoformat()}
+        payload = {"subnet": subnet, "ts": now.isoformat(), "actor": actor}
         self.bus.publish("ctrl/discover/start", payload)
-        record_audit(self.db, "system", "discover_start", payload)
+        record_audit(self.db, actor, "discover_start", payload)
+        DISCOVER_SCANS_TOTAL.inc()
         self.discovery_results = []
         self.discovery_state = {
             "status": "running",
@@ -191,10 +207,15 @@ class DecisionEngine:
                 "error": f"timeout>{self.discovery_timeout}s",
             }
             self.discovery_deadline = None
-        return {"devices": self.discovery_results, "state": self.discovery_state}
+        return {
+            "devices": self.discovery_results,
+            "state": self.discovery_state,
+            "history": self.discovery_history[-10:],
+        }
 
     def approve_device(self, device: Dict[str, Any]) -> str:
         action = append_device(device)
+        DISCOVER_DEVICES_APPROVED_TOTAL.inc()
         record_audit(self.db, "system", "discover_approve", {**device, "action": action})
         return action
 

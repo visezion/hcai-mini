@@ -1,0 +1,7 @@
+template: pdu_apc
+proto: snmp
+type: pdu
+match:
+  vendor: APC
+map: pdu_apc
+write: true

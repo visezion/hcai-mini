@@ -317,6 +317,34 @@ input:checked + .slider:before {
   background: var(--muted);
   cursor: not-allowed;
 }
+.discovery-log {
+  background: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin: 1rem 0;
+}
+.discovery-log h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+#discovery-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+#discovery-history li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+#discovery-history li:last-child {
+  border-bottom: none;
+}
 .status-chip {
   display: inline-flex;
   align-items: center;
