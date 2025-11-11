@@ -1,0 +1,21 @@
+site: dc1
+mode_default: propose
+weights:
+  thermal_risk: 1.0
+  energy: 0.35
+  wear: 0.15
+limits:
+  temp_c:
+    min: 16
+    max: 27
+    max_delta_per_min: 1.0
+  fan_rpm:
+    min: 800
+    max: 2200
+    max_delta_per_min: 200
+hysteresis:
+  anomaly_on: 0.97
+  anomaly_off: 0.93
+approvals_required:
+  - mode_change:auto_full
+  - temp_c_change_over:2.0

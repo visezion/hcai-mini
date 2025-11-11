@@ -1,0 +1,154 @@
+import json
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+from ..config import append_device, get_policy, get_settings
+from ..features import FeatureStore
+from ..models.anomaly_vae import VAEAnomaly
+from ..models.forecaster import Forecaster
+from ..models.mpc import MPCController
+from ..policy.safety import Safety
+from ..storage.db import DB
+from ..storage.audit import record_audit
+
+
+class DecisionEngine:
+    def __init__(
+        self,
+        db: DB,
+        bus,
+        feature_store: FeatureStore,
+        forecaster: Forecaster,
+        anomaly: VAEAnomaly,
+        controller: MPCController,
+        safety: Safety,
+    ) -> None:
+        self.db = db
+        self.bus = bus
+        self.feature_store = feature_store
+        self.forecaster = forecaster
+        self.anomaly = anomaly
+        self.controller = controller
+        self.safety = safety
+        self.policy = get_policy()
+        self.settings = get_settings()
+        self.mode = self.settings.mode
+        self.latest_tiles: Dict[str, Dict[str, Any]] = {}
+        self.discovery_results: List[Dict[str, Any]] = []
+
+    def handle_message(self, _client, _userdata, msg) -> None:
+        topic = msg.topic
+        payload = msg.payload.decode()
+        if topic.startswith("site/"):
+            data = json.loads(payload)
+            self._handle_telemetry(data)
+        elif topic.startswith("ctrl/") and topic.endswith("/receipt"):
+            data = json.loads(payload)
+            self.db.record_receipt({
+                "ts": data.get("ts"),
+                "device_id": data.get("device_id"),
+                "status": data.get("status"),
+                "applied_json": json.dumps(data.get("applied", {})),
+                "latency_ms": data.get("latency_ms"),
+                "notes": data.get("notes"),
+            })
+        elif topic == "ctrl/discover/results":
+            data = json.loads(payload)
+            self.discovery_results = data.get("devices", [])
+        else:
+            # ignore
+            pass
+
+    def _handle_telemetry(self, data: Dict[str, Any]) -> None:
+        rack = data.get("rack", "unknown")
+        metrics = data.get("metrics", {})
+        temp = metrics.get("temp_c")
+        if temp is not None:
+            self.feature_store.push(rack, "temp_c", temp)
+        self.db.insert(
+            "telemetry",
+            {
+                "ts": data.get("ts"),
+                "site": data.get("site"),
+                "rack": rack,
+                "temp_c": temp,
+                "hum_pct": metrics.get("hum_pct"),
+                "power_kw": metrics.get("power_kw"),
+                "airflow_cfm": metrics.get("airflow_cfm"),
+                "raw_json": json.dumps(data),
+            },
+        )
+        self.latest_tiles[rack] = {
+            "ts": data.get("ts"),
+            "metrics": metrics,
+        }
+        self._maybe_act(rack)
+
+    def _maybe_act(self, rack: str) -> None:
+        window = self.feature_store.get_window(rack, "temp_c")
+        preds, lo, hi = self.forecaster.predict(window)
+        score, alarm = self.anomaly.score(window)
+        self.db.insert(
+            "forecasts",
+            {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "horizon_s": 60,
+                "rack": rack,
+                "temp_pred": preds[0] if preds else None,
+                "temp_lo": lo[0] if lo else None,
+                "temp_hi": hi[0] if hi else None,
+                "power_pred": None,
+            },
+        )
+        self.db.insert(
+            "anomalies",
+            {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "rack": rack,
+                "score": score,
+                "threshold": self.anomaly.threshold,
+                "is_alarm": 1 if alarm else 0,
+            },
+        )
+        if not alarm and (preds[5] if len(preds) > 5 else preds[0]) < self.policy["limits"]["temp_c"]["max"]:
+            return
+        current = {"supply_temp_c": 18.0, "fan_rpm": 1200}
+        proposal = self.controller.propose(preds, current)
+        safe = self.safety.enforce(current, proposal)
+        action_payload = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "device_id": self.policy.get("site", "device"),
+            "cmd": "setpoints",
+            "set": {k: safe[k] for k in ("supply_temp_c", "fan_rpm")},
+            "mode": self.mode,
+            "reason": "forecast_risk_high" if alarm else "anomaly",
+            "ticket": "HCAI-BOOTSTRAP",
+            "constraints": self.policy.get("limits", {}),
+            "safety_summary": safe["safety_summary"],
+        }
+        self.db.record_action(
+            {
+                "ts": action_payload["ts"],
+                "device_id": action_payload["device_id"],
+                "cmd_json": action_payload,
+                "mode": self.mode,
+                "status": "queued",
+                "reason": action_payload["reason"],
+                "model_version": "bootstrap",
+                "safety_summary": safe["safety_summary"],
+            }
+        )
+        topic = "ctrl/proposals" if self.mode == "propose" else f"ctrl/{action_payload['device_id']}/set"
+        self.bus.publish(topic, action_payload)
+
+    def start_discovery(self, subnet: str) -> None:
+        payload = {"subnet": subnet, "ts": datetime.now(timezone.utc).isoformat()}
+        self.bus.publish("ctrl/discover/start", payload)
+        record_audit(self.db, "system", "discover_start", payload)
+
+    def list_discoveries(self) -> List[Dict[str, Any]]:
+        return self.discovery_results
+
+    def approve_device(self, device: Dict[str, Any]) -> None:
+        append_device(device)
+        record_audit(self.db, "system", "discover_approve", device)

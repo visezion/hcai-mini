@@ -1,0 +1,43 @@
+services:
+  hcai-mini:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    image: local/hcai-mini:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MQTT_URL: "mqtt://localhost:1883"
+      MQTT_USER: "hcai"
+      MQTT_PASS: "changeme"
+      MODE: "propose"
+      UI_ENABLE: "true"
+      DB_PATH: "/data/hcai.sqlite"
+      POLICY_PATH: "/config/policy.yaml"
+      DEVICES_PATH: "/config/devices.yaml"
+      DISCOVERY_SUBNET: "10.0.0.0/24"
+    volumes:
+      - ./data:/data
+      - ./config:/config
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+  hcai-edge:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.edge
+    image: local/hcai-edge:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MQTT_URL: "mqtt://localhost:1883"
+      MQTT_USER: "hcai"
+      MQTT_PASS: "changeme"
+      DEVICES_PATH: "/config/devices.yaml"
+      MAP_FILE: "/maps/modbus_map.yaml"
+    volumes:
+      - ./config:/config:ro
+      - ./edge/modbus_map.yaml:/maps/modbus_map.yaml:ro

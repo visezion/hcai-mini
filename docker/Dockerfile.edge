@@ -1,0 +1,7 @@
+FROM python:3.11-slim
+WORKDIR /edge
+COPY requirements-edge.txt ./
+RUN pip install --no-cache-dir -r requirements-edge.txt
+COPY edge ./edge
+COPY config ./config
+CMD ["python", "-m", "edge.bridge"]

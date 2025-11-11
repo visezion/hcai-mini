@@ -1,0 +1,13 @@
+maps:
+  crac_standard:
+    registers:
+      supply_temp_c:
+        type: holding
+        address: 40010
+        scale: 10
+        write: true
+      fan_rpm:
+        type: holding
+        address: 40020
+        scale: 1
+        write: true

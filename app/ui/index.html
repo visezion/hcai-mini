@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>hcai-mini</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>hcai-mini</h1>
+      <nav>
+        <button data-page="overview" class="active">Overview</button>
+        <button data-page="actions">Actions</button>
+        <button data-page="discovery">Network Discovery</button>
+      </nav>
+    </header>
+    <main>
+      <section id="overview" class="page active">
+        <h2>Telemetry</h2>
+        <div id="tiles" class="grid"></div>
+      </section>
+      <section id="actions" class="page">
+        <h2>Actions (placeholder)</h2>
+        <p>Future table of actions and approvals.</p>
+      </section>
+      <section id="discovery" class="page">
+        <h2>Network Discovery</h2>
+        <div class="controls">
+          <input id="subnet" type="text" value="10.0.0.0/24" />
+          <button id="start-discovery">Discover Devices</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>IP</th><th>Protocol</th><th>Guess</th><th>Approve</th></tr>
+          </thead>
+          <tbody id="discovery-body"></tbody>
+        </table>
+      </section>
+    </main>
+    <script src="/ui/app.js"></script>
+  </body>
+</html>
