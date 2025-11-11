@@ -218,7 +218,7 @@ function renderDevices(devices = []) {
   if (!body) return;
   body.innerHTML = '';
   if (!devices.length) {
-    body.innerHTML = '<tr><td colspan="5">No devices configured</td></tr>';
+    body.innerHTML = '<tr><td colspan="6">No devices configured</td></tr>';
     return;
   }
   devices.forEach((dev) => {
@@ -234,6 +234,36 @@ function renderDevices(devices = []) {
       <td><button class="text-btn" data-device="${dev.id}">Remove</button></td>`;
     tr.querySelector('button').addEventListener('click', () => deleteDevice(dev.id));
     body.appendChild(tr);
+  });
+}
+
+function renderDeviceGrid(devices = []) {
+  const grid = document.getElementById('devices-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!devices.length) {
+    grid.innerHTML = '<p class="empty">No device telemetry yet.</p>';
+    return;
+  }
+  devices.forEach((dev) => {
+    const latest = dev.latest || {};
+    const card = document.createElement('div');
+    card.className = 'device-card';
+    card.innerHTML = `
+      <header>
+        <h3>${dev.id}</h3>
+        <span class="chip">${dev.proto || '--'}</span>
+      </header>
+      <div class="device-meta">${dev.type || ''} • ${dev.host}:${dev.port || ''}</div>
+      <div class="metrics">
+        <div><span>Temp</span><strong>${latest.temp_c ?? '--'} °C</strong></div>
+        <div><span>Humidity</span><strong>${latest.hum_pct ?? '--'} %</strong></div>
+        <div><span>Power</span><strong>${latest.power_kw ?? '--'} kW</strong></div>
+        <div><span>Airflow</span><strong>${latest.airflow_cfm ?? '--'} cfm</strong></div>
+      </div>
+      <small>Rack: ${dev.rack || 'n/a'} • Last: ${latest.ts || '--'}</small>
+    `;
+    grid.appendChild(card);
   });
 }
 
@@ -413,6 +443,17 @@ async function loadDevices() {
   }
 }
 
+async function loadDeviceSummary() {
+  try {
+    const res = await fetch('/devices/summary');
+    const data = await res.json();
+    renderDeviceGrid(data.devices || []);
+  } catch (err) {
+    console.error('device summary fetch failed', err);
+    renderDeviceGrid([]);
+  }
+}
+
 async function loadTemplates() {
   try {
     const res = await fetch('/templates');
@@ -471,5 +512,11 @@ document.addEventListener('DOMContentLoaded', () => {
   loadMode();
   loadDevices();
   loadTemplates();
+  loadDeviceSummary();
+  const refreshBtn = document.getElementById('refresh-devices');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadDeviceSummary);
+  }
+  setInterval(loadDeviceSummary, 20000);
   initWebSocket();
 });

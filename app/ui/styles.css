@@ -180,6 +180,50 @@ input:checked + .slider:before {
   margin-top: 0.4rem;
   color: var(--muted);
 }
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.device-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.device-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.device-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.device-card .metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.device-card .device-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.device-card .metrics span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.device-card .metrics strong {
+  display: block;
+  font-size: 1rem;
+}
+.nav-btn.small {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+}
 .main-nav {
   display: flex;
   justify-content: center;
@@ -411,6 +455,14 @@ input:checked + .slider:before {
 .status-chip.error {
   background: #ff4d4f;
   color: #111;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  font-size: 0.75rem;
 }
 .empty {
   color: var(--muted);

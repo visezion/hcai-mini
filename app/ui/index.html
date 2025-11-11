@@ -9,7 +9,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>hcai-mini</h1>
-        <p class="subtitle">Predict � Detect � Control</p>
+        <p class="subtitle">Predict Ã‚Â· Detect Ã‚Â· Control</p>
       </div>
       <div class="topbar-actions">
         <div class="theme-toggle">
@@ -32,7 +32,7 @@
     <section class="hero">
       <div>
         <h2>Human-centric AI mini controller</h2>
-        <p>hcai-mini forecasts environmental drift, flags anomalies, and executes safe adjustments automatically�while keeping operators in full control.</p>
+        <p>hcai-mini forecasts environmental drift, flags anomalies, and executes safe adjustments automaticallyÃ¢â‚¬â€while keeping operators in full control.</p>
       </div>
       <ul>
         <li>Real-time telemetry ingest</li>
@@ -44,6 +44,7 @@
 
     <nav class="main-nav">
       <button class="nav-btn active" data-page="monitor">Monitor</button>
+      <button class="nav-btn" data-page="devices">Devices</button>
       <button class="nav-btn" data-page="actions">Actions</button>
       <button class="nav-btn" data-page="setup">Setup</button>
     </nav>
@@ -53,7 +54,7 @@
         <h3>Ingest</h3>
         <p>Live messages processed</p>
         <div class="value">0</div>
-        <small id="summary-ingest-meta">Awaiting telemetry�</small>
+        <small id="summary-ingest-meta">Awaiting telemetryÃ¢â‚¬Â¦</small>
       </article>
       <article class="summary-card" id="summary-forecast">
         <h3>Forecast</h3>
@@ -99,6 +100,18 @@
         </div>
       </section>
 
+      <section class="page" id="page-devices">
+        <div class="panel wide">
+          <div class="panel-header">
+            <div>
+              <h2>Device telemetry</h2>
+              <p>Latest readings per hardware asset</p>
+            </div>
+            <button id="refresh-devices" class="nav-btn small">Refresh</button>
+          </div>
+          <div id="devices-grid" class="device-grid"></div>
+        </div>
+      </section>
       <section class="page" id="page-actions">
         <div class="panel" id="mode-panel">
           <div class="panel-header">
@@ -176,7 +189,7 @@
               <tr><th>ID</th><th>Type</th><th>Protocol</th><th>Host</th><th>Port</th><th></th></tr>
             </thead>
             <tbody id="devices-body">
-              <tr><td colspan="6">Loading device list�</td></tr>
+              <tr><td colspan="6">Loading device listÃ¢â‚¬Â¦</td></tr>
             </tbody>
           </table>
         </div>
@@ -192,7 +205,7 @@
               <tr><th>Name</th><th>Protocol</th><th>Type</th><th>Map</th><th>File</th></tr>
             </thead>
             <tbody id="templates-body">
-              <tr><td colspan="6">Loading templates�</td></tr>
+              <tr><td colspan="6">Loading templatesÃ¢â‚¬Â¦</td></tr>
             </tbody>
           </table>
         </div>
@@ -200,7 +213,7 @@
     </main>
 
     <footer>
-      <small>&copy; 2025 hcai-mini � MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; � ctrl/&lt;device&gt;</small>
+      <small>&copy; 2025 hcai-mini Ã‚Â· MQTT topics site/&lt;site&gt;/rack/&lt;rack&gt; Ã‚Â· ctrl/&lt;device&gt;</small>
     </footer>
 
     <script src="/ui/app.js"></script>
